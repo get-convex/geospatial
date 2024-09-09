@@ -1,0 +1,35 @@
+{
+  "name": "uses-component",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "convex dev",
+    "predev": "convex dev --until-success && convex dashboard",
+    "logs": "convex logs",
+    "lint": "tsc -p convex && eslint convex"
+  },
+  "dependencies": {    
+    "antd": "^5.13.3",
+    "convex": "1.15.1-alpha.2",
+    "d3-array": "^3.2.4",
+    "h3-js": "^4.1.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1"    
+  },
+  "devDependencies": {
+    "@types/d3-array": "^3.2.1",
+    "@types/leaflet": "^1.9.8",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}

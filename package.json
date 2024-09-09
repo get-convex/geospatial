@@ -1,0 +1,84 @@
+{
+  "name": "geospatial-component",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc --project ./esm.json && echo '{\\n  \"type\": \"module\"\\n}' > dist/esm/package.json",
+    "build:cjs": "tsc --project ./commonjs.json && echo '{\\n  \"type\": \"commonjs\"\\n}' > dist/commonjs/package.json",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepack": "node node10stubs.mjs",
+    "postpack": "node node10stubs.mjs --cleanup"
+  },
+  "files": [
+    "dist",
+    "src",
+    "frontend"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/esm/client/index.d.ts",
+        "default": "./dist/esm/client/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/client/index.d.ts",
+        "default": "./dist/commonjs/client/index.js"
+      }
+    },
+    "./frontend": {
+      "import": {
+        "types": "./dist/esm/frontend.d.ts",
+        "default": "./dist/esm/frontend.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/frontend.d.ts",
+        "default": "./dist/commonjs/frontend.js"
+      }
+    },
+    "./convex.config.js": {
+      "import": {
+        "types": "./dist/esm/component/convex.config.d.ts",
+        "default": "./dist/esm/component/convex.config.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/component/convex.config.d.ts",
+        "default": "./dist/commonjs/component/convex.config.js"
+      }
+    }
+  },
+  "dependencies": {    
+    "convex": "1.15.1-alpha.2",
+    "@types/d3-array": "^3.2.1",
+    "d3-array": "^3.2.4",
+    "h3-js": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.1",
+    "@types/leaflet": "^1.9.8",
+    "@types/node": "^18.17.0",
+    "@types/react-dom": "^18.2.17",  
+    "@types/react": "^18.2.43",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "antd": "^5.13.3",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "eslint": "^8.55.0",
+    "globals": "^15.9.0",
+    "leaflet": "^1.9.4",
+    "prettier": "3.2.5",
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
+    "react": "^18.2.0",
+    "typescript-eslint": "^8.4.0",
+    "typescript": "~5.0.3",
+    "vite": "^5.0.8"
+  },
+  "main": "./dist/commonjs/client/index.js",
+  "types": "./dist/commonjs/client/index.d.ts",
+  "module": "./dist/esm/client/index.js"
+}
