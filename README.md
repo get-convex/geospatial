@@ -1,5 +1,7 @@
 # Geospatial Index
 
+![image](https://github.com/user-attachments/assets/864c1785-37fc-4662-841c-a35238792bf4)
+
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
 After installing this component, your Convex deployment will have a key value store that maps string keys to geographic coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
 
