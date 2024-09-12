@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server.js";
 import { api } from "./_generated/api.js";
 import { point, pointToArray } from "./types.js";
-import { latLngToCells, polygonContains } from "./geometry.js";
+import { latLngToCells, polygonContains } from "./lib/geometry.js";
 import {
   getHexagonEdgeLengthAvg,
   greatCircleDistance,

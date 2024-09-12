@@ -152,6 +152,88 @@ export type DatabaseWriter = GenericDatabaseWriter<DataModel>;
 
 export declare const components: {
   geospatial: {
+    geo2: {
+      deleteDocument: FunctionReference<
+        "mutation",
+        "internal",
+        { key: string; maxResolution: number },
+        any
+      >;
+      getDocument: FunctionReference<
+        "query",
+        "internal",
+        { key: string },
+        {
+          coordinates: { latitude: number; longitude: number };
+          filterKeys: any;
+          key: string;
+          sortKey: number;
+        } | null
+      >;
+      insertDocument: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          document: {
+            coordinates: { latitude: number; longitude: number };
+            filterKeys: any;
+            key: string;
+            sortKey: number;
+          };
+          maxResolution: number;
+        },
+        any
+      >;
+    };
+    geo2query: {
+      debugH3Cells: FunctionReference<
+        "query",
+        "internal",
+        {
+          maxResolution: number;
+          rectangle: {
+            ne: { latitude: number; longitude: number };
+            nw: { latitude: number; longitude: number };
+            se: { latitude: number; longitude: number };
+            sw: { latitude: number; longitude: number };
+          };
+        },
+        Array<string>
+      >;
+      queryDocuments: FunctionReference<
+        "query",
+        "internal",
+        {
+          maxResolution: number;
+          query: {
+            filtering: Array<{
+              filterKey: string;
+              filterValue:
+                | string
+                | number
+                | boolean
+                | ArrayBuffer
+                | null
+                | bigint;
+            }>;
+            maxResults: number;
+            rectangle: {
+              ne: { latitude: number; longitude: number };
+              nw: { latitude: number; longitude: number };
+              se: { latitude: number; longitude: number };
+              sw: { latitude: number; longitude: number };
+            };
+            sorting: {
+              interval: { endExclusive: number; startInclusive: number };
+            };
+          };
+        },
+        Array<{
+          coordinates: { latitude: number; longitude: number };
+          key: string;
+        }>
+      >;
+    };
     index: {
       get: FunctionReference<
         "query",

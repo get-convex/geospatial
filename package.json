@@ -51,9 +51,11 @@
   },
   "dependencies": {
     "@types/d3-array": "^3.2.1",
+    "compare-utf8": "^0.1.1",
     "convex": "1.16.0-alpha.2",
-    "d3-array": "^3.2.4",    
-    "h3-js": "^4.1.0"
+    "d3-array": "^3.2.4",
+    "h3-js": "^4.1.0",
+    "heap-js": "^2.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
