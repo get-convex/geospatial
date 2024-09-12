@@ -215,6 +215,7 @@ export declare const components: {
                 | ArrayBuffer
                 | null
                 | bigint;
+              occur: "should" | "must";
             }>;
             maxResults: number;
             rectangle: {
@@ -224,7 +225,7 @@ export declare const components: {
               sw: { latitude: number; longitude: number };
             };
             sorting: {
-              interval: { endExclusive: number; startInclusive: number };
+              interval: { endExclusive?: number; startInclusive?: number };
             };
           };
         },

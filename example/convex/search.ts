@@ -12,33 +12,48 @@ export default query({
       ne: point,
       se: point,
     }),
+    mustFilter: v.array(v.string()),
+    shouldFilter: v.array(v.string()),
     maxRows: v.number(),
   },
   async handler(ctx, args) {
-    const results = await ctx.runQuery(components.geospatial.geo2query.queryDocuments, {
-      query: {
-        rectangle: args.rectangle,
-        filtering: [],
-        sorting: {
-          interval: {
-            startInclusive: Number.MIN_VALUE,
-            endExclusive: Number.MAX_VALUE,
-          }
+    const mustFilterConditions = args.mustFilter.map((emoji) => ({
+      filterKey: "name",
+      filterValue: emoji,
+      occur: "must" as const,
+    }));
+    const shouldFilterConditions = args.shouldFilter.map((emoji) => ({
+      filterKey: "name",
+      filterValue: emoji,
+      occur: "should" as const,
+    }));
+    const results = await ctx.runQuery(
+      components.geospatial.geo2query.queryDocuments,
+      {
+        query: {
+          rectangle: args.rectangle,
+          filtering: [...mustFilterConditions, ...shouldFilterConditions],
+          sorting: {
+            interval: {},
+          },
+          maxResults: args.maxRows,
         },
-        maxResults: args.maxRows,
+        maxResolution: 9,
       },
-      maxResolution: 14,      
-    });
-    const h3Cells = await ctx.runQuery(components.geospatial.geo2query.debugH3Cells, {
-      rectangle: args.rectangle,
-      maxResolution: 14,
-    });
+    );
+    const h3Cells = await ctx.runQuery(
+      components.geospatial.geo2query.debugH3Cells,
+      {
+        rectangle: args.rectangle,
+        maxResolution: 9,
+      },
+    );
     const coordinatesByKey = new Map<string, Point>();
     const rowFetches = [];
     for (const result of results) {
       rowFetches.push(ctx.db.get(result.key as Id<"locations">));
       coordinatesByKey.set(result.key, result.coordinates);
-    }    
+    }
     for (const result of results) {
       coordinatesByKey.set(result.key, result.coordinates);
     }

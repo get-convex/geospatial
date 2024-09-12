@@ -27,7 +27,7 @@ export const insertDocument = mutation({
     const pointId = await ctx.db.insert("points", args.document as any);
     const cells = latLngToCells(args.maxResolution, args.document.coordinates);
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
-    for (const h3Cell of cells) {      
+    for (const h3Cell of cells) {
       await ctx.db.insert("pointsbyH3Cell", {
         h3Cell,
         tupleKey,
@@ -41,7 +41,7 @@ export const insertDocument = mutation({
         await ctx.db.insert("pointsByFilterKey", {
           filterKey,
           filterValue,
-          tupleKey,          
+          tupleKey,
         });
       }
     }
@@ -78,16 +78,14 @@ export const deleteDocument = mutation({
       .first();
     if (!existing) {
       return null;
-    }    
+    }
     const cells = latLngToCells(args.maxResolution, existing.coordinates);
     const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
     for (const h3Cell of cells) {
       const existingH3Cell = await ctx.db
         .query("pointsbyH3Cell")
         .withIndex("h3Cell", (q) =>
-          q
-            .eq("h3Cell", h3Cell)
-            .eq("tupleKey", tupleKey)
+          q.eq("h3Cell", h3Cell).eq("tupleKey", tupleKey),
         )
         .unique();
       if (!existingH3Cell) {
@@ -106,7 +104,7 @@ export const deleteDocument = mutation({
             q
               .eq("filterKey", filterKey)
               .eq("filterValue", filterValue)
-              .eq("tupleKey", tupleKey)              
+              .eq("tupleKey", tupleKey),
           )
           .unique();
         if (!existingFilterKey) {

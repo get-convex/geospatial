@@ -19,7 +19,7 @@ export const rectangle = v.object({
   nw: point,
   ne: point,
   se: point,
-})
+});
 export type Rectangle = Infer<typeof rectangle>;
 
 export function recordValidator<

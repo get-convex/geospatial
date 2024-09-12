@@ -16,7 +16,6 @@ import type * as index from "../index.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_geometry from "../lib/geometry.js";
 import type * as lib_interval from "../lib/interval.js";
-import type * as lib_nextafter from "../lib/nextafter.js";
 import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
 import type * as lib_zigzag from "../lib/zigzag.js";
@@ -42,7 +41,6 @@ declare const fullApi: ApiFromModules<{
   "lib/d64": typeof lib_d64;
   "lib/geometry": typeof lib_geometry;
   "lib/interval": typeof lib_interval;
-  "lib/nextafter": typeof lib_nextafter;
   "lib/primitive": typeof lib_primitive;
   "lib/tupleKey": typeof lib_tupleKey;
   "lib/zigzag": typeof lib_zigzag;
@@ -112,6 +110,7 @@ export type Mounts = {
               | ArrayBuffer
               | null
               | bigint;
+            occur: "should" | "must";
           }>;
           maxResults: number;
           rectangle: {
@@ -121,7 +120,7 @@ export type Mounts = {
             sw: { latitude: number; longitude: number };
           };
           sorting: {
-            interval: { endExclusive: number; startInclusive: number };
+            interval: { endExclusive?: number; startInclusive?: number };
           };
         };
       },

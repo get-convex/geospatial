@@ -4,7 +4,7 @@ import { point, primitive, recordValidator } from "./types.js";
 
 export default defineSchema({
   locations: defineTable({
-    key: v.string(),    
+    key: v.string(),
     coordinates: point,
   }).index("key", ["key"]),
 
@@ -17,10 +17,7 @@ export default defineSchema({
     key: v.string(),
     coordinates: point,
     sortKey: v.number(),
-    filterKeys: v.record(
-      v.string(),
-      v.union(primitive, v.array(primitive)),
-    ),
+    filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
   }).index("key", ["key"]),
 
   pointsbyH3Cell: defineTable({

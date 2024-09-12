@@ -1,7 +1,7 @@
-import { Infer, v } from "convex/values"
+import { Infer, v } from "convex/values";
 
 export const interval = v.object({
-    startInclusive: v.number(),
-    endExclusive: v.number(),
-})
+  startInclusive: v.optional(v.number()),
+  endExclusive: v.optional(v.number()),
+});
 export type Interval = Infer<typeof interval>;

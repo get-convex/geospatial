@@ -16,10 +16,16 @@ import { Icon, LatLng, LatLngExpression } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
+import { Select } from "antd";
+import { FOOD_EMOJIS } from "../convex/constants.js";
 
 const manhattan = [40.746, -73.985];
 
-function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
+function LocationSearch(props: {
+  setLoading: (loading: boolean) => void;
+  mustFilter: string[];
+  shouldFilter: string[];
+}) {
   const map = useMap();
   const [bounds, setBounds] = useState(map.getBounds());
   const addPoint = useMutation(api.addPoint.default);
@@ -47,7 +53,9 @@ function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
   }, [bounds]);
   const results = useQuery(api.search.default, {
     rectangle,
-    maxRows: 256,
+    mustFilter: props.mustFilter,
+    shouldFilter: props.shouldFilter,
+    maxRows: 96,
   });
   props.setLoading(results === undefined);
 
@@ -109,13 +117,23 @@ function SearchResult(props: {
   );
 }
 
+const emojiFilterItems = [
+  // {value: 'none', label: 'No filter'},
+  ...FOOD_EMOJIS.map((emoji) => ({ label: emoji, value: emoji })),
+];
+
 function App() {
   const [loading, setLoading] = useState(true);
+  const [mustFilter, setMustFilter] = useState<string[]>([]);
+  const [shouldFilter, setShouldFilter] = useState<string[]>([]);
   return (
     <>
       <h1>Convex Geospatial Demo</h1>
-      Right click on the map to put down a random fruit emoji! The blue polygons
-      visualize the current H3 index cells.
+      Right click on the map to put down a random emoji! The blue polygons
+      visualize the current H3 index cells. You can also filter the results by a
+      single emoji (a "must" filter that's a required condition) or a set of
+      emojis (a "should" filter that requires at least one of the emojis to
+      match).
       <div
         style={{
           marginBottom: "10px",
@@ -126,8 +144,25 @@ function App() {
           zIndex: 1000,
         }}
       >
+        <Select
+          allowClear
+          placeholder="Pick an emoji to require"
+          defaultValue={[]}
+          options={emojiFilterItems}
+          style={{ width: "50%" }}
+          onChange={(v: any) => setMustFilter(v ? [v] : [])}
+        />
+        <Select
+          mode="multiple"
+          allowClear
+          placeholder="Pick some emoji to allow"
+          defaultValue={[]}
+          options={emojiFilterItems}
+          style={{ width: "50%" }}
+          onChange={setShouldFilter}
+        />
         {loading && (
-          <span style={{ position: "absolute", right: "6px", top: "12px" }}>
+          <span style={{ position: "absolute", right: "6px", top: "50px" }}>
             <i>Loading...</i>
           </span>
         )}
@@ -137,7 +172,11 @@ function App() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <LocationSearch setLoading={setLoading} />
+        <LocationSearch
+          setLoading={setLoading}
+          mustFilter={mustFilter}
+          shouldFilter={shouldFilter}
+        />
       </MapContainer>
     </>
   );
