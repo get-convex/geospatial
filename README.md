@@ -53,18 +53,18 @@ const example = mutation(async (ctx) => {
 ```
 
 After inserting some points, you can query them with the `queryRectangle` API. Pass in the four corners of
-a given rectangle in clockwise order, and the API will return a list of points within that region:
+a given rectangle, and the API will return a list of points within that region:
 
 ```ts
 // convex/index.ts
 
 const example = query(async (ctx) => {
-  const rectangle = [
-    { latitude: 40.7831, longitude: -73.9712 },
-    { latitude: 40.7831, longitude: -72.9712 },
-    { latitude: 41.7831, longitude: -72.9712 },
-    { latitude: 41.7831, longitude: -73.9712 },
-  ];
+  const rectangle = {
+    sw: { latitude: 40.7831, longitude: -73.9712 },
+    nw: { latitude: 40.7831, longitude: -72.9712 },
+    ne: { latitude: 41.7831, longitude: -72.9712 },
+    se: { latitude: 41.7831, longitude: -73.9712 },
+  };
   const result = await geospatialIndex.queryRectangle(ctx, rectangle);
   return result;
 });

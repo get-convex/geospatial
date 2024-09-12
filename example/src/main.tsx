@@ -12,5 +12,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ConvexProvider client={convex}>
       <App />
     </ConvexProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

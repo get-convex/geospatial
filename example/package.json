@@ -8,15 +8,15 @@
     "logs": "convex logs",
     "lint": "tsc -p convex && eslint convex"
   },
-  "dependencies": {    
+  "dependencies": {
     "antd": "^5.13.3",
-    "convex": "1.15.1-alpha.2",
+    "convex": "^1.16.0-alpha.2",
     "d3-array": "^3.2.4",
     "h3-js": "^4.1.0",
     "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-leaflet": "^4.2.1"    
+    "react-leaflet": "^4.2.1"
   },
   "devDependencies": {
     "@types/d3-array": "^3.2.1",

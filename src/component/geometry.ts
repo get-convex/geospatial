@@ -5,7 +5,7 @@ export function latLngToCells(maxResolution: number, point: Point) {
   const leafCell = latLngToCell(
     point.latitude,
     point.longitude,
-    maxResolution + 1
+    maxResolution + 1,
   );
   if (leafCell === null) {
     throw new Error("Invalid coordinates");

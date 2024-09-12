@@ -175,7 +175,12 @@ export declare const components: {
         {
           maxResolution: number;
           maxRows: number;
-          rectangle: Array<{ latitude: number; longitude: number }>;
+          rectangle: {
+            ne: { latitude: number; longitude: number };
+            nw: { latitude: number; longitude: number };
+            se: { latitude: number; longitude: number };
+            sw: { latitude: number; longitude: number };
+          };
         },
         {
           h3Cells: Array<string>;

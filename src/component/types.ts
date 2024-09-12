@@ -5,4 +5,8 @@ export const point = v.object({
   longitude: v.number(),
 });
 
+export function pointToArray(p: Point): [number, number] {
+  return [p.latitude, p.longitude];
+}
+
 export type Point = Infer<typeof point>;

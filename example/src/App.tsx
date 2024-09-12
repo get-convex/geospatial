@@ -38,12 +38,12 @@ function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
       latitude: latLong.lat,
       longitude: latLong.lng,
     });
-    return [
-      latLongToObj(bounds.getSouthWest()),
-      latLongToObj(bounds.getNorthWest()),
-      latLongToObj(bounds.getNorthEast()),
-      latLongToObj(bounds.getSouthEast()),
-    ];
+    return {
+      sw: latLongToObj(bounds.getSouthWest()),
+      nw: latLongToObj(bounds.getNorthWest()),
+      ne: latLongToObj(bounds.getNorthEast()),
+      se: latLongToObj(bounds.getSouthEast()),
+    };
   }, [bounds]);
   const results = useQuery(api.search.default, {
     rectangle,
@@ -90,20 +90,22 @@ function SearchResult(props: {
   const { latitude, longitude } = row.coordinates;
   const map = useMap();
   const zoom = map.getZoom();
-  
+
   // Calculate size based on zoom level
   const baseSize = 20;
   const size = Math.max(baseSize, baseSize * (zoom / 10));
 
   return (
-    <Marker 
-      position={[latitude, longitude]} 
-      icon={new Icon({
-        iconUrl: `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${row.name}</text></svg>`,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size],
-      })}
-    />      
+    <Marker
+      position={[latitude, longitude]}
+      icon={
+        new Icon({
+          iconUrl: `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${row.name}</text></svg>`,
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size],
+        })
+      }
+    />
   );
 }
 
@@ -112,7 +114,8 @@ function App() {
   return (
     <>
       <h1>Convex Geospatial Demo</h1>
-      Right click on the map to put down a random fruit emoji! The blue polygons visualize the current H3 index cells.
+      Right click on the map to put down a random fruit emoji! The blue polygons
+      visualize the current H3 index cells.
       <div
         style={{
           marginBottom: "10px",
@@ -129,7 +132,6 @@ function App() {
           </span>
         )}
       </div>
-
       <MapContainer center={manhattan as LatLngExpression} id="mapId" zoom={15}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

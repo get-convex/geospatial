@@ -32,7 +32,7 @@ declare const fullApi: ApiFromModules<{
   index: typeof index;
   types: typeof types;
 }>;
-declare const fullApiWithMounts: typeof fullApi & {
+export type Mounts = {
   index: {
     get: FunctionReference<
       "query",
@@ -56,7 +56,12 @@ declare const fullApiWithMounts: typeof fullApi & {
       {
         maxResolution: number;
         maxRows: number;
-        rectangle: Array<{ latitude: number; longitude: number }>;
+        rectangle: {
+          ne: { latitude: number; longitude: number };
+          nw: { latitude: number; longitude: number };
+          se: { latitude: number; longitude: number };
+          sw: { latitude: number; longitude: number };
+        };
       },
       {
         h3Cells: Array<string>;
@@ -74,6 +79,10 @@ declare const fullApiWithMounts: typeof fullApi & {
     >;
   };
 };
+// For now fullApiWithMounts is only fullApi which provides
+// jump-to-definition in component client code.
+// Use Mounts for the same type without the inference.
+declare const fullApiWithMounts: typeof fullApi;
 
 export declare const api: FilterApi<
   typeof fullApiWithMounts,
