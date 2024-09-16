@@ -133,7 +133,14 @@ const example = query(async (ctx) => {
     ne: { latitude: 41.7831, longitude: -72.9712 },
     se: { latitude: 41.7831, longitude: -73.9712 },
   };
-  const result = await geospatialIndex.queryRectangle(ctx, rectangle, [], { startInclusive: 10, endExclusive: 20 });
+  const result = await geospatialIndex.queryRectangle(
+    ctx, 
+    rectangle, 
+    [], 
+    { startInclusive: 10, endExclusive: 20 },
+    undefined,
+    64,
+  );
   return result;
 });
 ```

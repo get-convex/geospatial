@@ -9,7 +9,7 @@ import {
 import { GenericId } from "convex/values";
 import type { api } from "../component/_generated/api.js";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
-import { point, rectangle } from "../component/types.js";
+import { point } from "../component/types.js";
 
 export type { Point };
 export { point };
