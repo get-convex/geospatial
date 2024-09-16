@@ -37,7 +37,9 @@ function LocationSearch(props: {
     contextmenu: (e) => {
       e.originalEvent.preventDefault();
       const latLng = map.mouseEventToLatLng(e.originalEvent);
-      addPoint({ point: { latitude: latLng.lat, longitude: latLng.lng } });
+      addPoint({ point: { latitude: latLng.lat, longitude: latLng.lng } }).then(
+        () => setMutationNumber((prev) => prev + 1),
+      );
     },
   });
   const rectangle = useMemo(() => {
@@ -56,6 +58,7 @@ function LocationSearch(props: {
   const [rows, setRows] = useState<any[]>([]);
   const generationNumber = useRef(0);
   const [loading, setLoading] = useState(false);
+  const [mutationNumber, setMutationNumber] = useState(0);
   useEffect(() => {
     const url =
       convexAddress.replace(/\.convex\.cloud$/, ".convex.site") + "/search";
@@ -136,6 +139,7 @@ function LocationSearch(props: {
       shouldFilter: props.shouldFilter,
     }),
     setLoading,
+    mutationNumber,
   ]);
 
   const h3Cells = useQuery(api.search.h3Cells, {
