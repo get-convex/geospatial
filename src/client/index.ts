@@ -23,7 +23,7 @@ if (typeof Convex === "undefined") {
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 9;
+export const DEFAULT_MAX_RESOLUTION = 10;
 
 export type GeospatialDocument = {
   key: string;
@@ -32,7 +32,9 @@ export type GeospatialDocument = {
   sortKey: number;
 };
 
-export class GeospatialIndex<Doc extends GeospatialDocument> {
+export class GeospatialIndex<
+  Doc extends GeospatialDocument = GeospatialDocument,
+> {
   /**
    * Create a new geospatial index, powered by H3 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
@@ -40,7 +42,7 @@ export class GeospatialIndex<Doc extends GeospatialDocument> {
    * @param component - The registered geospatial index from `components`.
    * @param maxResolution - The maximum resolution to use when querying. See https://h3geo.org/docs/core-library/restable/
    * for the feature size at each resolution. Higher resolution indexes will be able to distinguish between closer
-   * points at the cost of storage, insertion time, and query time.
+   * points at the cost of storage, insertion time, and query time. This defaults to 10, which has ~28m resolution.
    */
   constructor(
     private component: UseApi<typeof api>,
@@ -111,8 +113,9 @@ export class GeospatialIndex<Doc extends GeospatialDocument> {
    * @param rectangle - The geographic area to query.
    * @param filterConditions - The filter conditions to apply to the query.
    * @param sortingInterval - The sorting interval to apply to the query.
+   * @param cursor - The continuation cursor to use for paginating through results.
    * @param maxRows - The maximum number of rows to return.
-   * @returns - An array of objects with the key-coordinate pairs.
+   * @returns - An array of objects with the key-coordinate pairs and optionally a continuation cursor.
    */
 
   async queryRectangle(
