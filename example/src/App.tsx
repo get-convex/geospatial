@@ -13,12 +13,12 @@ import {
 } from "react-leaflet";
 import { cellToVertexes, vertexToLatLng } from "h3-js";
 import { Icon, LatLng, LatLngExpression } from "leaflet";
-import { useConvex, useMutation, useQueries, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
-import { Rectangle } from "../../src/component/types.js";
+import { convexAddress } from "./main.js";
 
 const manhattan = [40.746, -73.985];
 
@@ -53,83 +53,108 @@ function LocationSearch(props: {
     };
   }, [bounds]);
 
-  const maxRows = 96;
+  const [rows, setRows] = useState<any[]>([]);
+  const generationNumber = useRef(0);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const url =
+      convexAddress.replace(/\.convex\.cloud$/, ".convex.site") + "/search";
+    const abortController = new AbortController();
+
+    generationNumber.current++;
+    const executionNumber = generationNumber.current;
+    console.log(`Starting search @ ${executionNumber}`);
+
+    const receiver = async () => {
+      if (executionNumber !== generationNumber.current) {
+        console.log(`Skipping canceled results @ ${executionNumber} `);
+        return;
+      }
+      setLoading(true);
+      props.setLoading(true);
+      setRows([]);
+      const resp = await fetch(url, {
+        method: "POST",
+        body: JSON.stringify({
+          rectangle,
+          mustFilter: props.mustFilter,
+          shouldFilter: props.shouldFilter,
+          maxRows: 96,
+        }),
+        signal: abortController.signal,
+      });
+      if (!resp.ok) {
+        throw new Error(resp.statusText);
+      }
+      if (!resp.body) {
+        throw new Error("Body missing from response");
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        const results: any[] = [];
+        for (const line of lines) {
+          if (line.trim()) {
+            results.push(JSON.parse(line));
+          }
+        }
+        if (executionNumber !== generationNumber.current) {
+          console.log(`Skipping canceled results @ ${executionNumber} `);
+          return;
+        }
+        setRows((prev) => [...prev, ...results]);
+      }
+      if (buffer.trim()) {
+        const lines = buffer.split("\n");
+        const results: any[] = [];
+        for (const line of lines) {
+          if (line.trim()) {
+            results.push(JSON.parse(line));
+          }
+        }
+        if (executionNumber !== generationNumber.current) {
+          console.log(`Skipping canceled results @ ${executionNumber} `);
+          return;
+        }
+        setRows((prev) => [...prev, ...results]);
+      }
+      setLoading(false);
+      props.setLoading(false);
+    };
+    void receiver();
+    return () => abortController.abort("canceled");
+  }, [
+    JSON.stringify({
+      rectangle,
+      mustFilter: props.mustFilter,
+      shouldFilter: props.shouldFilter,
+    }),
+    setLoading,
+  ]);
 
   const h3Cells = useQuery(api.search.h3Cells, {
     rectangle,
+    maxResolution: 10,
   });
-  
-  const convex = useConvex();  
-  const [results, setResults] = useState<(Doc<"locations"> & { coordinates: Point })[]>([]);
-  const generationNumber = useRef(0);
-  useEffect(() => {
-    generationNumber.current++;
-    const currentGenerationNumber = generationNumber.current;            
 
-    const queryLoop = async () => {
-      let cursor: string | undefined = undefined;
-      let i = 0;
-      while (true) {        
-        console.log('querying at', cursor);
-        const resp: { rows: (Doc<"locations"> & { coordinates: Point })[], nextCursor: string | undefined } = await convex.query(api.search.execute, {
-          rectangle,          
-          mustFilter: props.mustFilter,
-          shouldFilter: props.shouldFilter,
-          cursor,
-          maxRows,
-        })
-        if (currentGenerationNumber !== generationNumber.current) {
-          console.log('canceled');
-          break;
-       } 
-        if (resp.nextCursor === undefined) {
-          props.setLoading(false);
-          console.log('done');
-          break;
-        }
-        if (resp.nextCursor === cursor) {
-          console.log('cursor did not change', cursor);
-          break;
-        }
-        setResults(results => [...results, ...resp.rows]);
-        cursor = resp.nextCursor;        
-        i++;
+  const stickyH3Cells = useRef<string[]>([]);
+  if (h3Cells !== undefined) {
+    stickyH3Cells.current = h3Cells;
+  }
 
-        if (i > 10) {
-          console.log('stopping early');
-          break;
-        }
-      }        
-    };
-    props.setLoading(true);
-    setResults([]);
-    void queryLoop();
-    return () => {
-      console.log('unmounting')
-      generationNumber.current++;      
-    }
-  }, [convex, props.setLoading, generationNumber, JSON.stringify({ mustFilter: props.mustFilter, shouldFilter: props.shouldFilter, rectangle })])
- 
+  const stickyRows = useRef<any[]>([]);
+  if (rows.length > 0 || loading === false) {
+    stickyRows.current = rows;
+  }
 
-  
-
-  // const results = useQuery(api.search.default, {
-  //   rectangle,
-  //   mustFilter: props.mustFilter,
-  //   shouldFilter: props.shouldFilter,
-  //   maxRows: 96,
-  // });
-  // props.setLoading(results === undefined);
-
-  // const stickyResults = useRef(results);
-  // if (results !== undefined) {
-  //   stickyResults.current = results;
-  // }
-  // if (stickyResults.current === undefined) {
-  //   return null;
-  // }
   const tilingPolygons: number[][][] = [];
-  for (const cell of h3Cells ?? []) {
+  for (const cell of stickyH3Cells.current) {
     const polygon = [];
     for (const vertex of cellToVertexes(cell)) {
       const coords = vertexToLatLng(vertex);
@@ -146,7 +171,7 @@ function LocationSearch(props: {
           positions={polygon as any}
         />
       ))}
-      {results.map((row) => (
+      {stickyRows.current.map((row) => (
         <SearchResult key={row._id} row={row} />
       ))}
     </>

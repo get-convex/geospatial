@@ -4,8 +4,8 @@ import App from "./App.tsx";
 import "./index.css";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 
-const address = import.meta.env.VITE_CONVEX_URL;
-const convex = new ConvexReactClient(address);
+export const convexAddress: string = import.meta.env.VITE_CONVEX_URL;
+const convex = new ConvexReactClient(convexAddress);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

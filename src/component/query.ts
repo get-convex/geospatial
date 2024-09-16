@@ -98,7 +98,14 @@ export const execute = query({
     };
     const h3SRanges = [...h3Cells].map(
       (h3Cell) =>
-        new H3CellRange(ctx, h3Cell, args.cursor, sorting.interval, PREFETCH_SIZE, stats),
+        new H3CellRange(
+          ctx,
+          h3Cell,
+          args.cursor,
+          sorting.interval,
+          PREFETCH_SIZE,
+          stats,
+        ),
     );
     const h3Stream = new Union(h3SRanges);
 
@@ -136,9 +143,12 @@ export const execute = query({
     }
 
     // Finally, consume the stream and fetch the resulting IDs.
-    const channel = new Channel<{ tupleKey: TupleKey, docPromise: Promise<Doc<"points"> | null> }>(8);
+    const channel = new Channel<{
+      tupleKey: TupleKey;
+      docPromise: Promise<Doc<"points"> | null>;
+    }>(8);
     const producer = async () => {
-      try {        
+      try {
         while (true) {
           const tupleKey = await stream.current();
           if (tupleKey === null) {
@@ -165,7 +175,7 @@ export const execute = query({
     let nextCursor: TupleKey | undefined = undefined;
     const consumer = async () => {
       try {
-        for await (const { tupleKey, docPromise } of channel) {                                  
+        for await (const { tupleKey, docPromise } of channel) {
           const doc = await docPromise;
           if (doc === null) {
             throw new Error("Internal error: document not found");
@@ -178,22 +188,25 @@ export const execute = query({
             key: doc.key,
             coordinates: doc.coordinates,
           });
-          if (results.length >= args.query.maxResults){          
-            nextCursor = tupleKey;            
-            return;
-          }
-          if (stats.queriesIssued > 128 || stats.rowsRead > 512) {
+          if (results.length >= args.query.maxResults) {
             nextCursor = tupleKey;
             return;
           }
-        }      
+          if (stats.rowsRead >= 1024) {
+            console.warn(
+              `Reached Convex query limit of 1024 rows at ${tupleKey}`,
+            );
+            nextCursor = tupleKey;
+            return;
+          }
+        }
         nextCursor = undefined;
         return;
       } finally {
         if (!channel.closed) {
           channel.close(true);
         }
-      }    
+      }
     };
     await Promise.all([producer(), consumer()]);
     console.log(`Found ${results.length} results (${JSON.stringify(stats)})`);

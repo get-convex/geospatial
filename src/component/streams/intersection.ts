@@ -4,25 +4,29 @@ import { PointSet } from "./zigzag.js";
 
 export class Intersection implements PointSet {
   private initialized = false;
-  constructor(private streams: Array<PointSet>) { }
+  constructor(private streams: Array<PointSet>) {}
 
   async initialize() {
     if (this.initialized) {
       return;
     }
-    const sizeHintPromises = this.streams.map(async (stream) => { return { stream, sizeHint: await stream.sizeHint() } });
+    const sizeHintPromises = this.streams.map(async (stream) => {
+      return { stream, sizeHint: await stream.sizeHint() };
+    });
     const sizeHintByStream = new Map();
     for (const { stream, sizeHint } of await Promise.all(sizeHintPromises)) {
       sizeHintByStream.set(stream, sizeHint);
     }
-    this.streams.sort((a, b) => sizeHintByStream.get(a)! - sizeHintByStream.get(b)!);
+    this.streams.sort(
+      (a, b) => sizeHintByStream.get(a)! - sizeHintByStream.get(b)!,
+    );
     for (const stream of this.streams.slice(1)) {
       stream.setPrefetch(PREFETCH_SIZE / 4);
     }
 
     await this.goToFirstDoc();
 
-    this.initialized = true;          
+    this.initialized = true;
   }
 
   async goToFirstDoc(): Promise<TupleKey | null> {
@@ -49,7 +53,7 @@ export class Intersection implements PointSet {
     while (true) {
       let restart = false;
       for (const stream of this.streams) {
-        await stream.seek(candidate)
+        await stream.seek(candidate);
         const seekResult = await stream.current();
         if (seekResult === null) {
           this.streams = [];
@@ -65,13 +69,12 @@ export class Intersection implements PointSet {
         continue;
       }
       for (const stream of this.streams) {
-        if (await stream.current() !== candidate) {
-          throw new Error("Internal error: stream diverged");          
+        if ((await stream.current()) !== candidate) {
+          throw new Error("Internal error: stream diverged");
         }
-      }      
+      }
       return candidate;
     }
-    
   }
 
   async current(): Promise<TupleKey | null> {
@@ -99,7 +102,7 @@ export class Intersection implements PointSet {
 
   async sizeHint(): Promise<number> {
     await this.initialize();
-    return this.streams.length > 0 ? this.streams[0].sizeHint() : 0;    
+    return this.streams.length > 0 ? this.streams[0].sizeHint() : 0;
   }
 
   setPrefetch(prefetch: number): void {

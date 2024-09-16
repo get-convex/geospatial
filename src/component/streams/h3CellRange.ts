@@ -152,5 +152,5 @@ export class H3CellRange implements PointSet {
 }
 
 export function h3CellCounterKey(h3Cell: string): string {
-  return 'h3:' + h3Cell;
+  return "h3:" + h3Cell;
 }

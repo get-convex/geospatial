@@ -26,5 +26,5 @@ export default defineSchema({
     key: v.string(),
     shard: v.number(),
     value: v.number(),
-  }).index("by_key_and_shard", ["key", "shard"]),  
+  }).index("by_key_and_shard", ["key", "shard"]),
 });

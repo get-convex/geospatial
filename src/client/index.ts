@@ -121,8 +121,11 @@ export class GeospatialIndex<Doc extends GeospatialDocument> {
     filterConditions: FilterObject<Doc>[] = [],
     sortingInterval: { startInclusive?: number; endExclusive?: number } = {},
     cursor: string | undefined = undefined,
-    maxRows: number = 64,    
-  ): Promise<{ results: { key: Doc["key"]; coordinates: Point }[], nextCursor?: string }> {
+    maxRows: number = 64,
+  ): Promise<{
+    results: { key: Doc["key"]; coordinates: Point }[];
+    nextCursor?: string;
+  }> {
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
         rectangle,
@@ -130,6 +133,7 @@ export class GeospatialIndex<Doc extends GeospatialDocument> {
         sorting: { interval: sortingInterval },
         maxResults: maxRows,
       },
+      cursor,
       maxResolution: this.maxResolution,
     });
     return resp;

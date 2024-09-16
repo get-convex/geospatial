@@ -13,7 +13,11 @@ export async function get(ctx: QueryCtx, key: string): Promise<number> {
   return result;
 }
 
-export async function increment(ctx: MutationCtx, key: string, delta: number): Promise<void> {
+export async function increment(
+  ctx: MutationCtx,
+  key: string,
+  delta: number,
+): Promise<void> {
   const shard = Math.floor(Math.random() * NUM_SHARDS);
   const counter = await ctx.db
     .query("counters")

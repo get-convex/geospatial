@@ -153,7 +153,10 @@ export class FilterKeyRange implements PointSet {
   }
 
   async sizeHint(): Promise<number> {
-    return await get(this.ctx, filterCounterKey(this.filterKey, this.filterValue));
+    return await get(
+      this.ctx,
+      filterCounterKey(this.filterKey, this.filterValue),
+    );
   }
 
   setPrefetch(prefetch: number): void {
@@ -161,6 +164,9 @@ export class FilterKeyRange implements PointSet {
   }
 }
 
-export function filterCounterKey(filterKey: string, filterValue: Primitive): string {
-  return 'filter:' + filterKey + ':' + serialize(filterValue);
+export function filterCounterKey(
+  filterKey: string,
+  filterValue: Primitive,
+): string {
+  return "filter:" + filterKey + ":" + serialize(filterValue);
 }

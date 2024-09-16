@@ -1,5 +1,10 @@
 import { Infer, v } from "convex/values";
-import { internalAction, internalMutation, mutation, query } from "./_generated/server.js";
+import {
+  internalAction,
+  internalMutation,
+  mutation,
+  query,
+} from "./_generated/server.js";
 import { point, primitive, recordValidator } from "./types.js";
 import { latLngToCells } from "./lib/geometry.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
@@ -36,7 +41,7 @@ export const insert = mutation({
         h3Cell,
         tupleKey,
       });
-      await increment(ctx, h3CellCounterKey(h3Cell), 1);      
+      await increment(ctx, h3CellCounterKey(h3Cell), 1);
     }
     for (const [filterKey, filterDoc] of Object.entries(
       args.document.filterKeys,
@@ -143,45 +148,47 @@ export const backfillCounts = internalAction({
   handler: async (ctx, args) => {
     let currentCursor: Infer<typeof cursor> | null = args.cursor ?? {
       table: "h3",
-    }
+    };
     let i = 0;
     while (currentCursor) {
       currentCursor = await ctx.runMutation(internal.document.backfillPage, {
         cursor: currentCursor,
-        maxRows: args.maxRows,        
-      })      
+        maxRows: args.maxRows,
+      });
       i += 1;
       if (i >= args.maxPages) {
         await ctx.scheduler.runAfter(0, internal.document.backfillCounts, {
           cursor: currentCursor,
           maxRows: args.maxRows,
           maxPages: args.maxPages,
-        })
+        });
         return;
       }
       console.log(`Page ${i} @ ${JSON.stringify(currentCursor)}`);
     }
-  }
-})
+  },
+});
 
 export const backfillPage = internalMutation({
   args: {
     cursor,
-    maxRows: v.number(),    
+    maxRows: v.number(),
   },
-  returns: v.union(
-    v.null(),
-    cursor,
-  ),
+  returns: v.union(v.null(), cursor),
   handler: async (ctx, args) => {
-    if (args.cursor.table === "h3") {      
-      const points = await ctx.db.query("pointsbyH3Cell")
-        .withIndex("by_id", q => args.cursor.lowerBound ? q.gt("_id", args.cursor.lowerBound as any) : q)
+    if (args.cursor.table === "h3") {
+      const points = await ctx.db
+        .query("pointsbyH3Cell")
+        .withIndex("by_id", (q) =>
+          args.cursor.lowerBound
+            ? q.gt("_id", args.cursor.lowerBound as any)
+            : q,
+        )
         .take(args.maxRows);
       if (points.length === 0) {
         return {
           table: "filter" as const,
-        }
+        };
       }
       for (const h3Key of points) {
         await increment(ctx, h3CellCounterKey(h3Key.h3Cell), 1);
@@ -189,25 +196,32 @@ export const backfillPage = internalMutation({
       return {
         table: "h3" as const,
         lowerBound: points[points.length - 1]._id,
-      }
-    }    
-    else if (args.cursor.table === "filter") {
-      const points = await ctx.db.query("pointsByFilterKey")
-        .withIndex("by_id", q => args.cursor.lowerBound ? q.gt("_id", args.cursor.lowerBound as any) : q)
+      };
+    } else if (args.cursor.table === "filter") {
+      const points = await ctx.db
+        .query("pointsByFilterKey")
+        .withIndex("by_id", (q) =>
+          args.cursor.lowerBound
+            ? q.gt("_id", args.cursor.lowerBound as any)
+            : q,
+        )
         .take(args.maxRows);
       if (points.length === 0) {
         return null;
       }
       for (const filterKey of points) {
-        await increment(ctx, filterCounterKey(filterKey.filterKey, filterKey.filterValue), 1);
+        await increment(
+          ctx,
+          filterCounterKey(filterKey.filterKey, filterKey.filterValue),
+          1,
+        );
       }
       return {
         table: "filter" as const,
         lowerBound: points[points.length - 1]._id,
-      }
-    }
-    else {
+      };
+    } else {
       throw new Error("Invariant failed: Unknown table " + args.cursor.table);
     }
-  }
-})
+  },
+});
