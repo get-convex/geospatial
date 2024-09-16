@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import "./App.css";
 import { api } from "../convex/_generated/api";
 
@@ -18,11 +18,12 @@ import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
-import { convexAddress } from "./main.js";
+import { useGeoQuery } from "./useGeoQuery.js";
 
 const manhattan = [40.746, -73.985];
 
 function LocationSearch(props: {
+  loading: boolean;
   setLoading: (loading: boolean) => void;
   mustFilter: string[];
   shouldFilter: string[];
@@ -37,9 +38,7 @@ function LocationSearch(props: {
     contextmenu: (e) => {
       e.originalEvent.preventDefault();
       const latLng = map.mouseEventToLatLng(e.originalEvent);
-      addPoint({ point: { latitude: latLng.lat, longitude: latLng.lng } }).then(
-        () => setMutationNumber((prev) => prev + 1),
-      );
+      addPoint({ point: { latitude: latLng.lat, longitude: latLng.lng } });
     },
   });
   const rectangle = useMemo(() => {
@@ -55,93 +54,16 @@ function LocationSearch(props: {
     };
   }, [bounds]);
 
-  const [rows, setRows] = useState<any[]>([]);
-  const generationNumber = useRef(0);
-  const [loading, setLoading] = useState(false);
-  const [mutationNumber, setMutationNumber] = useState(0);
-  useEffect(() => {
-    const url =
-      convexAddress.replace(/\.convex\.cloud$/, ".convex.site") + "/search";
-    const abortController = new AbortController();
+  const { rows, loading } = useGeoQuery(
+    rectangle,
+    props.mustFilter,
+    props.shouldFilter,
+    96,
+  );
 
-    generationNumber.current++;
-    const executionNumber = generationNumber.current;
-    console.log(`Starting search @ ${executionNumber}`);
-
-    const receiver = async () => {
-      if (executionNumber !== generationNumber.current) {
-        console.log(`Skipping canceled results @ ${executionNumber} `);
-        return;
-      }
-      setLoading(true);
-      props.setLoading(true);
-      setRows([]);
-      const resp = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify({
-          rectangle,
-          mustFilter: props.mustFilter,
-          shouldFilter: props.shouldFilter,
-          maxRows: 96,
-        }),
-        signal: abortController.signal,
-      });
-      if (!resp.ok) {
-        throw new Error(resp.statusText);
-      }
-      if (!resp.body) {
-        throw new Error("Body missing from response");
-      }
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        const results: any[] = [];
-        for (const line of lines) {
-          if (line.trim()) {
-            results.push(JSON.parse(line));
-          }
-        }
-        if (executionNumber !== generationNumber.current) {
-          console.log(`Skipping canceled results @ ${executionNumber} `);
-          return;
-        }
-        setRows((prev) => [...prev, ...results]);
-      }
-      if (buffer.trim()) {
-        const lines = buffer.split("\n");
-        const results: any[] = [];
-        for (const line of lines) {
-          if (line.trim()) {
-            results.push(JSON.parse(line));
-          }
-        }
-        if (executionNumber !== generationNumber.current) {
-          console.log(`Skipping canceled results @ ${executionNumber} `);
-          return;
-        }
-        setRows((prev) => [...prev, ...results]);
-      }
-      setLoading(false);
-      props.setLoading(false);
-    };
-    void receiver();
-    return () => abortController.abort("canceled");
-  }, [
-    JSON.stringify({
-      rectangle,
-      mustFilter: props.mustFilter,
-      shouldFilter: props.shouldFilter,
-    }),
-    setLoading,
-    mutationNumber,
-  ]);
-
+  if (loading !== props.loading) {
+    props.setLoading(loading);
+  }
   const h3Cells = useQuery(api.search.h3Cells, {
     rectangle,
     maxResolution: 10,
@@ -264,6 +186,7 @@ function App() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <LocationSearch
+          loading={loading}
           setLoading={setLoading}
           mustFilter={mustFilter}
           shouldFilter={shouldFilter}

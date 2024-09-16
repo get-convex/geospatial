@@ -1,62 +1,9 @@
 import { v } from "convex/values";
-import { action, httpAction, query } from "./_generated/server";
+import { query } from "./_generated/server";
 import { Point, point } from "../../src/client";
 import { geospatial } from ".";
 import { Id } from "./_generated/dataModel";
 import { rectangle } from "../../src/component/types";
-import { api } from "./_generated/api";
-
-export const executeStreaming = httpAction(async (ctx, req) => {
-  const { rectangle, mustFilter, shouldFilter, maxRows } = await req.json();
-  const encoder = new TextEncoder();
-  const body = new ReadableStream({
-    async start(controller) {
-      try {
-        let cursor: string | undefined = undefined;
-        let numEmitted = 0;
-        while (true) {
-          console.log("querying", cursor);
-          const { rows, nextCursor } = (await ctx.runQuery(api.search.execute, {
-            rectangle,
-            mustFilter,
-            shouldFilter,
-            cursor,
-            maxRows: 64,
-          })) as { rows: any[]; nextCursor: string | undefined };
-          console.log("received", rows, nextCursor);
-          for (const result of rows) {
-            controller.enqueue(encoder.encode(JSON.stringify(result) + "\n"));
-            numEmitted++;
-            if (numEmitted >= maxRows) {
-              break;
-            }
-          }
-          if (nextCursor === undefined || numEmitted >= maxRows) {
-            break;
-          }
-          if (cursor === nextCursor) {
-            console.error("cursor did not advance");
-            break;
-          }
-          cursor = nextCursor;
-        }
-      } catch (e: any) {
-        controller.error(e);
-      } finally {
-        controller.close();
-      }
-    },
-  });
-  return new Response(body, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "*",
-      "Access-Control-Allow-Headers": "*",
-      "Access-Control-Max-Age": "86400",
-    },
-  });
-});
 
 export const execute = query({
   args: {
