@@ -8,26 +8,33 @@ import {
 } from "convex/server";
 import { GenericId } from "convex/values";
 import type { api } from "../component/_generated/api.js";
-import type { Point } from "../component/types.js";
+import type { Point, Primitive, Rectangle } from "../component/types.js";
 import { point } from "../component/types.js";
 
 export type { Point };
 export { point };
 
-// on the Convex backend.
 declare global {
   const Convex: Record<string, unknown>;
 }
-
 if (typeof Convex === "undefined") {
   throw new Error(
     "this is Convex backend code, but it's running somewhere else!",
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 14;
+export const DEFAULT_MAX_RESOLUTION = 10;
 
-export class GeospatialIndex<K extends string = string> {
+export type GeospatialDocument = {
+  key: string;
+  coordinates: Point;
+  filterKeys: Record<string, Primitive | Primitive[]>;
+  sortKey: number;
+};
+
+export class GeospatialIndex<
+  Doc extends GeospatialDocument = GeospatialDocument,
+> {
   /**
    * Create a new geospatial index, powered by H3 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
@@ -35,11 +42,11 @@ export class GeospatialIndex<K extends string = string> {
    * @param component - The registered geospatial index from `components`.
    * @param maxResolution - The maximum resolution to use when querying. See https://h3geo.org/docs/core-library/restable/
    * for the feature size at each resolution. Higher resolution indexes will be able to distinguish between closer
-   * points at the cost of storage, insertion time, and query time.
+   * points at the cost of storage, insertion time, and query time. This defaults to 10, which has ~28m resolution.
    */
   constructor(
     private component: UseApi<typeof api>,
-    private maxResolution: number = DEFAULT_MAX_RESOLUTION,
+    public maxResolution: number = DEFAULT_MAX_RESOLUTION,
   ) {}
 
   /**
@@ -48,11 +55,23 @@ export class GeospatialIndex<K extends string = string> {
    * @param ctx - The Convex mutation context.
    * @param key - The unique string key to associate with the coordinate.
    * @param coordinates - The geographic coordinate `{ latitude, longitude }` to associate with the key.
+   * @param filterKeys - The filter keys to associate with the key.
+   * @param sortKey - The sort key to associate with the key, defaults to a randomly generated number.
    */
-  async insert(ctx: MutationCtx, key: K, coordinates: Point) {
-    await ctx.runMutation(this.component.index.insert, {
-      key,
-      coordinates,
+  async insert(
+    ctx: MutationCtx,
+    key: Doc["key"],
+    coordinates: Point,
+    filterKeys: Doc["filterKeys"],
+    sortKey?: number,
+  ) {
+    await ctx.runMutation(this.component.document.insert, {
+      document: {
+        key,
+        coordinates,
+        filterKeys,
+        sortKey: sortKey ?? Math.random(),
+      },
       maxResolution: this.maxResolution,
     });
   }
@@ -64,8 +83,9 @@ export class GeospatialIndex<K extends string = string> {
    * @param key - The unique string key to retrieve the coordinate for.
    * @returns - The geographic coordinate `{ latitude, longitude }` associated with the key, or `null` if the key is not found.
    */
-  async get(ctx: QueryCtx, key: K): Promise<Point | null> {
-    return await ctx.runQuery(this.component.index.get, { key });
+  async get(ctx: QueryCtx, key: Doc["key"]): Promise<Doc | null> {
+    const result = await ctx.runQuery(this.component.document.get, { key });
+    return result as Doc | null;
   }
 
   /**
@@ -75,8 +95,8 @@ export class GeospatialIndex<K extends string = string> {
    * @param key - The unique string key to remove from the index.
    * @returns - `true` if the key was found and removed, `false` otherwise.
    */
-  async remove(ctx: MutationCtx, key: K): Promise<boolean> {
-    return await ctx.runMutation(this.component.index.remove, {
+  async remove(ctx: MutationCtx, key: Doc["key"]): Promise<boolean> {
+    return await ctx.runMutation(this.component.document.remove, {
       key,
       maxResolution: this.maxResolution,
     });
@@ -91,27 +111,53 @@ export class GeospatialIndex<K extends string = string> {
    *
    * @param ctx - The Convex query context.
    * @param rectangle - The geographic area to query.
+   * @param filterConditions - The filter conditions to apply to the query.
+   * @param sortingInterval - The sorting interval to apply to the query.
+   * @param cursor - The continuation cursor to use for paginating through results.
    * @param maxRows - The maximum number of rows to return.
-   * @returns - An array of objects with the key-coordinate pairs and the H3 cell identifiers.
+   * @returns - An array of objects with the key-coordinate pairs and optionally a continuation cursor.
    */
 
   async queryRectangle(
     ctx: QueryCtx,
-    rectangle: {
-      sw: Point;
-      nw: Point;
-      ne: Point;
-      se: Point;
-    },
+    rectangle: Rectangle,
+    filterConditions: FilterObject<Doc>[] = [],
+    sortingInterval: { startInclusive?: number; endExclusive?: number } = {},
+    cursor: string | undefined = undefined,
     maxRows: number = 64,
   ): Promise<{
-    results: Array<{ key: K; coordinates: Point }>;
-    h3Cells: string[];
+    results: { key: Doc["key"]; coordinates: Point }[];
+    nextCursor?: string;
   }> {
-    const resp = await ctx.runQuery(this.component.index.queryRectangle, {
-      rectangle,
-      maxRows,
+    const resp = await ctx.runQuery(this.component.query.execute, {
+      query: {
+        rectangle,
+        filtering: filterConditions as any,
+        sorting: { interval: sortingInterval },
+        maxResults: maxRows,
+      },
+      cursor,
       maxResolution: this.maxResolution,
+    });
+    return resp;
+  }
+
+  /**
+   * Debug the H3 cells that would be queried for a given rectangle.
+   *
+   * @param ctx - The Convex query context.
+   * @param rectangle - The geographic area to query.
+   * @param maxResolution - The maximum resolution to use when querying.
+   * @returns - An array of H3 cell identifiers.
+   */
+  async debugH3Cells(
+    ctx: QueryCtx,
+    rectangle: Rectangle,
+    maxResolution: number,
+  ): Promise<string[]> {
+    const resp = await ctx.runQuery(this.component.query.debugH3Cells, {
+      rectangle,
+      maxResolution,
     });
     return resp as any;
   }
@@ -159,3 +205,13 @@ type MutationCtx = {
     ...args: OptionalRestArgs<Mutation>
   ) => Promise<FunctionReturnType<Mutation>>;
 } & QueryCtx;
+
+type FilterObject<Doc extends GeospatialDocument> = {
+  [K in keyof Doc["filterKeys"]]: {
+    filterKey: K;
+    filterValue: ExtractArray<Doc["filterKeys"][K]>;
+    occur: "should" | "must";
+  };
+}[keyof Doc["filterKeys"]];
+
+type ExtractArray<T> = T extends (infer U)[] ? U : T;

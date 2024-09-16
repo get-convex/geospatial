@@ -16,10 +16,18 @@ import { Icon, LatLng, LatLngExpression } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
+import { Select } from "antd";
+import { FOOD_EMOJIS } from "../convex/constants.js";
+import { useGeoQuery } from "./useGeoQuery.js";
 
 const manhattan = [40.746, -73.985];
 
-function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
+function LocationSearch(props: {
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+  mustFilter: string[];
+  shouldFilter: string[];
+}) {
   const map = useMap();
   const [bounds, setBounds] = useState(map.getBounds());
   const addPoint = useMutation(api.addPoint.default);
@@ -45,21 +53,34 @@ function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
       se: latLongToObj(bounds.getSouthEast()),
     };
   }, [bounds]);
-  const results = useQuery(api.search.default, {
-    rectangle,
-    maxRows: 256,
-  });
-  props.setLoading(results === undefined);
 
-  const stickyResults = useRef(results);
-  if (results !== undefined) {
-    stickyResults.current = results;
+  const { rows, loading } = useGeoQuery(
+    rectangle,
+    props.mustFilter,
+    props.shouldFilter,
+    96,
+  );
+
+  if (loading !== props.loading) {
+    props.setLoading(loading);
   }
-  if (stickyResults.current === undefined) {
-    return null;
+  const h3Cells = useQuery(api.search.h3Cells, {
+    rectangle,
+    maxResolution: 10,
+  });
+
+  const stickyH3Cells = useRef<string[]>([]);
+  if (h3Cells !== undefined) {
+    stickyH3Cells.current = h3Cells;
   }
+
+  const stickyRows = useRef<any[]>([]);
+  if (rows.length > 0 || loading === false) {
+    stickyRows.current = rows;
+  }
+
   const tilingPolygons: number[][][] = [];
-  for (const cell of stickyResults.current.h3Cells) {
+  for (const cell of stickyH3Cells.current) {
     const polygon = [];
     for (const vertex of cellToVertexes(cell)) {
       const coords = vertexToLatLng(vertex);
@@ -76,7 +97,7 @@ function LocationSearch(props: { setLoading: (loading: boolean) => void }) {
           positions={polygon as any}
         />
       ))}
-      {stickyResults.current.rows.map((row) => (
+      {stickyRows.current.map((row) => (
         <SearchResult key={row._id} row={row} />
       ))}
     </>
@@ -109,13 +130,23 @@ function SearchResult(props: {
   );
 }
 
+const emojiFilterItems = [
+  // {value: 'none', label: 'No filter'},
+  ...FOOD_EMOJIS.map((emoji) => ({ label: emoji, value: emoji })),
+];
+
 function App() {
   const [loading, setLoading] = useState(true);
+  const [mustFilter, setMustFilter] = useState<string[]>([]);
+  const [shouldFilter, setShouldFilter] = useState<string[]>([]);
   return (
     <>
       <h1>Convex Geospatial Demo</h1>
-      Right click on the map to put down a random fruit emoji! The blue polygons
-      visualize the current H3 index cells.
+      Right click on the map to put down a random emoji! The blue polygons
+      visualize the current H3 index cells. You can also filter the results by a
+      single emoji (a "must" filter that's a required condition) or a set of
+      emojis (a "should" filter that requires at least one of the emojis to
+      match).
       <div
         style={{
           marginBottom: "10px",
@@ -126,8 +157,25 @@ function App() {
           zIndex: 1000,
         }}
       >
+        <Select
+          allowClear
+          placeholder="Pick an emoji to require"
+          defaultValue={[]}
+          options={emojiFilterItems}
+          style={{ width: "50%" }}
+          onChange={(v: any) => setMustFilter(v ? [v] : [])}
+        />
+        <Select
+          mode="multiple"
+          allowClear
+          placeholder="Pick some emoji to allow"
+          defaultValue={[]}
+          options={emojiFilterItems}
+          style={{ width: "50%" }}
+          onChange={setShouldFilter}
+        />
         {loading && (
-          <span style={{ position: "absolute", right: "6px", top: "12px" }}>
+          <span style={{ position: "absolute", right: "6px", top: "50px" }}>
             <i>Loading...</i>
           </span>
         )}
@@ -137,7 +185,12 @@ function App() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <LocationSearch setLoading={setLoading} />
+        <LocationSearch
+          loading={loading}
+          setLoading={setLoading}
+          mustFilter={mustFilter}
+          shouldFilter={shouldFilter}
+        />
       </MapContainer>
     </>
   );

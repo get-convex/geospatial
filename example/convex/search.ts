@@ -2,27 +2,55 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { Point, point } from "../../src/client";
 import { geospatial } from ".";
+import { Id } from "./_generated/dataModel";
+import { rectangle } from "../../src/component/types";
 
-export default query({
+export const execute = query({
   args: {
-    rectangle: v.object({
-      sw: point,
-      nw: point,
-      ne: point,
-      se: point,
-    }),
+    rectangle,
+    mustFilter: v.array(v.string()),
+    shouldFilter: v.array(v.string()),
+    cursor: v.optional(v.string()),
     maxRows: v.number(),
   },
+  returns: v.object({
+    rows: v.array(
+      v.object({
+        _id: v.id("locations"),
+        _creationTime: v.number(),
+        name: v.string(),
+        coordinates: point,
+      }),
+    ),
+    nextCursor: v.optional(v.string()),
+    h3Cells: v.array(v.string()),
+  }),
   async handler(ctx, args) {
-    const { results, h3Cells } = await geospatial.queryRectangle(
+    const mustFilterConditions = args.mustFilter.map((emoji) => ({
+      filterKey: "name" as const,
+      filterValue: emoji,
+      occur: "must" as const,
+    }));
+    const shouldFilterConditions = args.shouldFilter.map((emoji) => ({
+      filterKey: "name" as const,
+      filterValue: emoji,
+      occur: "should" as const,
+    }));
+    const { results, nextCursor } = await geospatial.queryRectangle(
       ctx,
       args.rectangle,
+      [...mustFilterConditions, ...shouldFilterConditions],
+      {},
+      args.cursor,
       args.maxRows,
     );
     const coordinatesByKey = new Map<string, Point>();
     const rowFetches = [];
     for (const result of results) {
-      rowFetches.push(ctx.db.get(result.key));
+      rowFetches.push(ctx.db.get(result.key as Id<"locations">));
+      coordinatesByKey.set(result.key, result.coordinates);
+    }
+    for (const result of results) {
       coordinatesByKey.set(result.key, result.coordinates);
     }
     const rows = [];
@@ -33,9 +61,31 @@ export default query({
       const coordinates = coordinatesByKey.get(row._id)!;
       rows.push({ coordinates, ...row });
     }
+
+    const h3Cells = await geospatial.debugH3Cells(
+      ctx,
+      args.rectangle,
+      geospatial.maxResolution,
+    );
     return {
-      h3Cells,
       rows,
+      h3Cells,
+      nextCursor,
     };
+  },
+});
+
+export const h3Cells = query({
+  args: {
+    rectangle,
+    maxResolution: v.number(),
+  },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    return await geospatial.debugH3Cells(
+      ctx,
+      args.rectangle,
+      args.maxResolution,
+    );
   },
 });

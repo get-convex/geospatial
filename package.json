@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "prepack": "node node10stubs.mjs",
-    "postpack": "node node10stubs.mjs --cleanup"
+    "postpack": "node node10stubs.mjs --cleanup",
+    "test": "vitest"
   },
   "files": [
     "dist",
@@ -51,9 +52,11 @@
   },
   "dependencies": {
     "@types/d3-array": "^3.2.1",
+    "async-channel": "^0.2.0",
     "convex": "1.16.0-alpha.2",
-    "d3-array": "^3.2.4",    
-    "h3-js": "^4.1.0"
+    "d3-array": "^3.2.4",
+    "h3-js": "^4.1.0",
+    "heap-js": "^2.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
@@ -76,7 +79,8 @@
     "react-leaflet": "^4.2.1",
     "typescript": "~5.0.3",
     "typescript-eslint": "^8.4.0",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^2.1.0"
   },
   "main": "./dist/commonjs/client/index.js",
   "types": "./dist/commonjs/client/index.d.ts",
