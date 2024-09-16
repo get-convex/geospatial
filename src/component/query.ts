@@ -141,7 +141,6 @@ export const execute = query({
             await channel.push(ctx.db.get(pointId));
           } catch (e) {
             if (e instanceof ChannelClosedError) {
-              console.log("producer: channel closed");
               break;
             }
             throw e;
