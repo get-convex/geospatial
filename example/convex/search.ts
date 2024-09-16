@@ -8,16 +8,6 @@ import { api } from "./_generated/api";
 
 export const executeStreaming = httpAction(async (ctx, req) => {
   const { rectangle, mustFilter, shouldFilter, maxRows } = await req.json();
-  const mustFilterConditions = mustFilter.map((emoji: string) => ({
-    filterKey: "name" as const,
-    filterValue: emoji,
-    occur: "must" as const,
-  }));
-  const shouldFilterConditions = shouldFilter.map((emoji: string) => ({
-    filterKey: "name" as const,
-    filterValue: emoji,
-    occur: "should" as const,
-  }));
   const encoder = new TextEncoder();
   const body = new ReadableStream({
     async start(controller) {
