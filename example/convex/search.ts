@@ -18,7 +18,6 @@ export const executeStreaming = httpAction(async (ctx, req) => {
     filterValue: emoji,
     occur: "should" as const,
   }));
-  const filter = [...mustFilterConditions, ...shouldFilterConditions];
   const encoder = new TextEncoder();
   const body = new ReadableStream({
     async start(controller) {
