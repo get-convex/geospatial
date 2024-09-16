@@ -14,13 +14,13 @@ const geoDocument = v.object({
   ),
 });
 
-export const insertDocument = mutation({
+export const insert = mutation({
   args: {
     document: geoDocument,
     maxResolution: v.number(),
   },
   handler: async (ctx, args) => {
-    await deleteDocument(ctx, {
+    await remove(ctx, {
       key: args.document.key,
       maxResolution: args.maxResolution,
     });
@@ -48,7 +48,7 @@ export const insertDocument = mutation({
   },
 });
 
-export const getDocument = query({
+export const get = query({
   args: {
     key: v.string(),
   },
@@ -66,18 +66,19 @@ export const getDocument = query({
   },
 });
 
-export const deleteDocument = mutation({
+export const remove = mutation({
   args: {
     key: v.string(),
     maxResolution: v.number(),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("points")
       .withIndex("key", (q) => q.eq("key", args.key))
       .first();
     if (!existing) {
-      return null;
+      return false;
     }
     const cells = latLngToCells(args.maxResolution, existing.coordinates);
     const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
@@ -116,5 +117,6 @@ export const deleteDocument = mutation({
       }
     }
     await ctx.db.delete(existing._id);
+    return true;
   },
 });

@@ -76,7 +76,7 @@ export function coverRectangle(
   rectangle: Rectangle,
   maxResolution: number,
 ): Set<string> | null {
-  // Pick a resolution that's about 25% of the average of the rectangle's width and height.
+  // Pick a resolution that's about 10% of the average of the rectangle's width and height.
   // We don't have to be precise here, but going too large will increase the number of cells
   // we query, while going too small will cause us to overfetch and post-filter more.
   const rectangleHeight = greatCircleDistance(
@@ -93,7 +93,7 @@ export function coverRectangle(
   let resolution = maxResolution;
   for (; resolution >= 0; resolution--) {
     const hexWidth = getHexagonEdgeLengthAvg(resolution, UNITS.m);
-    if (hexWidth / averageDimension > 0.25) {
+    if (hexWidth / averageDimension > 0.1) {
       break;
     }
   }
@@ -124,6 +124,5 @@ export function coverRectangle(
       h3CellSet.add(neighbor);
     }
   }
-  console.log(`Returning ${h3CellSet.size} cells at ${resolution} resolution`);
   return h3CellSet;
 }

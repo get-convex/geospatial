@@ -152,14 +152,8 @@ export type DatabaseWriter = GenericDatabaseWriter<DataModel>;
 
 export declare const components: {
   geospatial: {
-    geo2: {
-      deleteDocument: FunctionReference<
-        "mutation",
-        "internal",
-        { key: string; maxResolution: number },
-        any
-      >;
-      getDocument: FunctionReference<
+    document: {
+      get: FunctionReference<
         "query",
         "internal",
         { key: string },
@@ -170,7 +164,7 @@ export declare const components: {
           sortKey: number;
         } | null
       >;
-      insertDocument: FunctionReference<
+      insert: FunctionReference<
         "mutation",
         "internal",
         {
@@ -184,8 +178,14 @@ export declare const components: {
         },
         any
       >;
+      remove: FunctionReference<
+        "mutation",
+        "internal",
+        { key: string; maxResolution: number },
+        boolean
+      >;
     };
-    geo2query: {
+    query: {
       debugH3Cells: FunctionReference<
         "query",
         "internal",
@@ -200,7 +200,7 @@ export declare const components: {
         },
         Array<string>
       >;
-      queryDocuments: FunctionReference<
+      execute: FunctionReference<
         "query",
         "internal",
         {
@@ -233,51 +233,6 @@ export declare const components: {
           coordinates: { latitude: number; longitude: number };
           key: string;
         }>
-      >;
-    };
-    index: {
-      get: FunctionReference<
-        "query",
-        "internal",
-        { key: string },
-        { latitude: number; longitude: number } | null
-      >;
-      insert: FunctionReference<
-        "mutation",
-        "internal",
-        {
-          coordinates: { latitude: number; longitude: number };
-          key: string;
-          maxResolution: number;
-        },
-        null
-      >;
-      queryRectangle: FunctionReference<
-        "query",
-        "internal",
-        {
-          maxResolution: number;
-          maxRows: number;
-          rectangle: {
-            ne: { latitude: number; longitude: number };
-            nw: { latitude: number; longitude: number };
-            se: { latitude: number; longitude: number };
-            sw: { latitude: number; longitude: number };
-          };
-        },
-        {
-          h3Cells: Array<string>;
-          results: Array<{
-            coordinates: { latitude: number; longitude: number };
-            key: string;
-          }>;
-        }
-      >;
-      remove: FunctionReference<
-        "mutation",
-        "internal",
-        { key: string; maxResolution: number },
-        boolean
       >;
     };
   };

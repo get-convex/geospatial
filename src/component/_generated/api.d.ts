@@ -10,15 +10,18 @@
  * @module
  */
 
-import type * as geo2 from "../geo2.js";
-import type * as geo2query from "../geo2query.js";
-import type * as index from "../index.js";
+import type * as document from "../document.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_geometry from "../lib/geometry.js";
 import type * as lib_interval from "../lib/interval.js";
 import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
-import type * as lib_zigzag from "../lib/zigzag.js";
+import type * as query from "../query.js";
+import type * as streams_filterKeyRange from "../streams/filterKeyRange.js";
+import type * as streams_h3CellRange from "../streams/h3CellRange.js";
+import type * as streams_intersection from "../streams/intersection.js";
+import type * as streams_union from "../streams/union.js";
+import type * as streams_zigzag from "../streams/zigzag.js";
 import type * as types from "../types.js";
 
 import type {
@@ -35,26 +38,23 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  geo2: typeof geo2;
-  geo2query: typeof geo2query;
-  index: typeof index;
+  document: typeof document;
   "lib/d64": typeof lib_d64;
   "lib/geometry": typeof lib_geometry;
   "lib/interval": typeof lib_interval;
   "lib/primitive": typeof lib_primitive;
   "lib/tupleKey": typeof lib_tupleKey;
-  "lib/zigzag": typeof lib_zigzag;
+  query: typeof query;
+  "streams/filterKeyRange": typeof streams_filterKeyRange;
+  "streams/h3CellRange": typeof streams_h3CellRange;
+  "streams/intersection": typeof streams_intersection;
+  "streams/union": typeof streams_union;
+  "streams/zigzag": typeof streams_zigzag;
   types: typeof types;
 }>;
 export type Mounts = {
-  geo2: {
-    deleteDocument: FunctionReference<
-      "mutation",
-      "public",
-      { key: string; maxResolution: number },
-      any
-    >;
-    getDocument: FunctionReference<
+  document: {
+    get: FunctionReference<
       "query",
       "public",
       { key: string },
@@ -65,7 +65,7 @@ export type Mounts = {
         sortKey: number;
       } | null
     >;
-    insertDocument: FunctionReference<
+    insert: FunctionReference<
       "mutation",
       "public",
       {
@@ -79,8 +79,14 @@ export type Mounts = {
       },
       any
     >;
+    remove: FunctionReference<
+      "mutation",
+      "public",
+      { key: string; maxResolution: number },
+      boolean
+    >;
   };
-  geo2query: {
+  query: {
     debugH3Cells: FunctionReference<
       "query",
       "public",
@@ -95,7 +101,7 @@ export type Mounts = {
       },
       Array<string>
     >;
-    queryDocuments: FunctionReference<
+    execute: FunctionReference<
       "query",
       "public",
       {
@@ -128,51 +134,6 @@ export type Mounts = {
         coordinates: { latitude: number; longitude: number };
         key: string;
       }>
-    >;
-  };
-  index: {
-    get: FunctionReference<
-      "query",
-      "public",
-      { key: string },
-      { latitude: number; longitude: number } | null
-    >;
-    insert: FunctionReference<
-      "mutation",
-      "public",
-      {
-        coordinates: { latitude: number; longitude: number };
-        key: string;
-        maxResolution: number;
-      },
-      null
-    >;
-    queryRectangle: FunctionReference<
-      "query",
-      "public",
-      {
-        maxResolution: number;
-        maxRows: number;
-        rectangle: {
-          ne: { latitude: number; longitude: number };
-          nw: { latitude: number; longitude: number };
-          se: { latitude: number; longitude: number };
-          sw: { latitude: number; longitude: number };
-        };
-      },
-      {
-        h3Cells: Array<string>;
-        results: Array<{
-          coordinates: { latitude: number; longitude: number };
-          key: string;
-        }>;
-      }
-    >;
-    remove: FunctionReference<
-      "mutation",
-      "public",
-      { key: string; maxResolution: number },
-      boolean
     >;
   };
 };

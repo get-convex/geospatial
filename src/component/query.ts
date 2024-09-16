@@ -6,15 +6,15 @@ import {
   rectangleContains,
   validateRectangle,
 } from "./lib/geometry.js";
-import {
-  FilterKeyRange,
-  H3CellRange,
-  Intersection,
-  PointSet,
-  Union,
-} from "./lib/zigzag.js";
+import { PointSet, Stats } from "./streams/zigzag.js";
+import { Intersection } from "./streams/intersection.js";
+import { Union } from "./streams/union.js";
+import { FilterKeyRange } from "./streams/filterKeyRange.js";
+import { H3CellRange } from "./streams/h3CellRange.js";
 import { interval } from "./lib/interval.js";
 import { decodeTupleKey } from "./lib/tupleKey.js";
+
+const BATCH_SIZE = 8;
 
 const equalityCondition = v.object({
   occur: v.union(v.literal("should"), v.literal("must")),
@@ -22,17 +22,14 @@ const equalityCondition = v.object({
   filterValue: primitive,
 });
 
-const geo2Query = v.object({
+const geospatialQuery = v.object({
   rectangle,
-
   filtering: v.array(equalityCondition),
-
   sorting: v.object({
     // TODO: Support reverse order.
     // order: v.union(v.literal("asc"), v.literal("desc")),
     interval,
   }),
-
   maxResults: v.number(),
 });
 
@@ -53,13 +50,14 @@ export const debugH3Cells = query({
   },
 });
 
-export const queryDocuments = query({
+export const execute = query({
   args: {
-    query: geo2Query,
+    query: geospatialQuery,
     maxResolution: v.number(),
   },
   returns: v.array(queryResult),
   handler: async (ctx, args) => {
+    console.time("execute");
     // First, validate the query.
     const { sorting } = args.query;
     if (
@@ -83,8 +81,15 @@ export const queryDocuments = query({
       );
       return [];
     }
+    const stats: Stats = {
+      h3Cells: h3Cells.size,
+      queriesIssued: 0,
+      rowsRead: 0,
+      rowsPostFiltered: 0,
+    };
     const h3SRanges = [...h3Cells].map(
-      (h3Cell) => new H3CellRange(ctx, h3Cell, sorting.interval),
+      (h3Cell) =>
+        new H3CellRange(ctx, h3Cell, sorting.interval, BATCH_SIZE, stats),
     );
     const h3Stream = new Union(h3SRanges);
 
@@ -99,6 +104,8 @@ export const queryDocuments = query({
           filter.filterKey,
           filter.filterValue,
           sorting.interval,
+          BATCH_SIZE,
+          stats,
         ),
       );
     }
@@ -135,7 +142,10 @@ export const queryDocuments = query({
       if (d === null) {
         throw new Error("Internal error: document not found");
       }
+      // TODO: We should fetch more results if we throw away results here
+      // in post filtering.
       if (!rectangleContains(args.query.rectangle, d.coordinates)) {
+        stats.rowsPostFiltered++;
         continue;
       }
       results.push({
@@ -143,7 +153,9 @@ export const queryDocuments = query({
         coordinates: d.coordinates,
       });
     }
-    console.log(`Found ${results.length} results`);
+    console.log(`Found ${results.length} results (${JSON.stringify(stats)})`);
+    console.timeEnd("execute");
+
     return results;
   },
 });

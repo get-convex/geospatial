@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 import { geospatial } from ".";
 import { point } from "../../src/client";
-import { components, mutation } from "./_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  mutation,
+} from "./_generated/server";
+import { internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
 
 export default mutation({
@@ -11,22 +16,11 @@ export default mutation({
     const id = await ctx.db.insert("locations", {
       name,
     });
-    // await geospatial.insert(ctx, id, point);
-    await ctx.runMutation(components.geospatial.geo2.insertDocument, {
-      document: {
-        key: id,
-        coordinates: point,
-        sortKey: Math.random(),
-        filterKeys: {
-          name,
-        },
-      },
-      maxResolution: 9,
-    });
+    await geospatial.insert(ctx, id, point, { name });
   },
 });
 
-export const addMany = mutation({
+export const addBatch = internalMutation({
   args: { count: v.number() },
   handler: async (ctx, { count }) => {
     for (let i = 0; i < count; i++) {
@@ -34,9 +28,8 @@ export const addMany = mutation({
       const id = await ctx.db.insert("locations", {
         name,
       });
-
-      const latitudeRange = [40.70314, 40.86787];
-      const longitudeRange = [-74.00712, -73.91972];
+      const latitudeRange = [39, 41];
+      const longitudeRange = [-75, -73];
       const latitude =
         Math.random() * (latitudeRange[1] - latitudeRange[0]) +
         latitudeRange[0];
@@ -44,17 +37,38 @@ export const addMany = mutation({
         Math.random() * (longitudeRange[1] - longitudeRange[0]) +
         longitudeRange[0];
       const point = { latitude, longitude };
-      await ctx.runMutation(components.geospatial.geo2.insertDocument, {
-        document: {
-          key: id,
-          coordinates: point,
-          sortKey: Math.random(),
-          filterKeys: {
-            name,
-          },
-        },
-        maxResolution: 9,
-      });
+      await geospatial.insert(ctx, id, point, { name });
+    }
+  },
+});
+
+export const addMany = internalAction({
+  args: { count: v.number(), batchSize: v.number(), parallelism: v.number() },
+  handler: async (ctx, args) => {
+    let ix = 0;
+    let added = 0;
+    const inProgress: Map<number, Promise<number>> = new Map();
+
+    while (true) {
+      if (added >= args.count) {
+        if (inProgress.size > 0) {
+          await Promise.all(inProgress.values());
+        }
+        break;
+      }
+      if (inProgress.size >= args.parallelism) {
+        const index = await Promise.race(inProgress.values());
+        inProgress.delete(index);
+        added += args.batchSize;
+        console.log(`Added ${args.batchSize} points (total: ${added})`);
+      }
+      if (inProgress.size < args.parallelism) {
+        const index = ix++;
+        const promise = ctx
+          .runMutation(internal.addPoint.addBatch, { count: args.batchSize })
+          .then(() => index);
+        inProgress.set(index, promise);
+      }
     }
   },
 });

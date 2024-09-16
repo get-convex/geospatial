@@ -5,4 +5,8 @@ export default defineSchema({
   locations: defineTable({
     name: v.string(),
   }),
+
+  presence: defineTable({
+    lastSeen: v.number(),
+  }),
 });
