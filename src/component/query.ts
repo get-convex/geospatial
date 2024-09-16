@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { point, primitive, rectangle } from "./types.js";
+import { Point, point, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
 import {
   coverRectangle,
@@ -13,6 +13,8 @@ import { FilterKeyRange } from "./streams/filterKeyRange.js";
 import { H3CellRange } from "./streams/h3CellRange.js";
 import { interval } from "./lib/interval.js";
 import { decodeTupleKey } from "./lib/tupleKey.js";
+import { Channel, ChannelClosedError } from "async-channel";
+import { Doc } from "./_generated/dataModel.js";
 
 const BATCH_SIZE = 8;
 
@@ -126,33 +128,55 @@ export const execute = query({
     }
 
     // Finally, consume the stream and fetch the resulting IDs.
-    const resultPromises = [];
-    while (resultPromises.length < args.query.maxResults) {
-      const tupleKey = await stream.current();
-      if (tupleKey === null) {
-        break;
+    const channel = new Channel<Promise<Doc<"points"> | null>>(8);
+    const producer = async () => {
+      try {
+        while (true) {
+          const tupleKey = await stream.current();
+          if (tupleKey === null) {
+            break;
+          }
+          const { pointId } = decodeTupleKey(tupleKey);
+          try {
+            await channel.push(ctx.db.get(pointId));
+          } catch (e) {
+            if (e instanceof ChannelClosedError) {
+              console.log("producer: channel closed");
+              break;
+            }
+            throw e;
+          }
+          await stream.advance();
+        }
+      } finally {
+        if (!channel.closed) {
+          channel.close(true);
+        }
       }
-      const { pointId } = decodeTupleKey(tupleKey);
-      resultPromises.push(ctx.db.get(pointId));
-      await stream.advance();
-    }
-    const resultDocs = await Promise.all(resultPromises);
-    const results = [];
-    for (const d of resultDocs) {
-      if (d === null) {
-        throw new Error("Internal error: document not found");
+    };
+    const results: { key: string; coordinates: Point }[] = [];
+    const consumer = async () => {
+      for await (const docPromise of channel) {
+        const doc = await docPromise;
+        if (doc === null) {
+          throw new Error("Internal error: document not found");
+        }
+        if (!rectangleContains(args.query.rectangle, doc.coordinates)) {
+          stats.rowsPostFiltered++;
+          continue;
+        }
+        results.push({
+          key: doc.key,
+          coordinates: doc.coordinates,
+        });
+        if (results.length >= args.query.maxResults) {
+          channel.close(true);
+          break;
+        }
       }
-      // TODO: We should fetch more results if we throw away results here
-      // in post filtering.
-      if (!rectangleContains(args.query.rectangle, d.coordinates)) {
-        stats.rowsPostFiltered++;
-        continue;
-      }
-      results.push({
-        key: d.key,
-        coordinates: d.coordinates,
-      });
-    }
+      return results;
+    };
+    await Promise.all([producer(), consumer()]);
     console.log(`Found ${results.length} results (${JSON.stringify(stats)})`);
     console.timeEnd("execute");
 
