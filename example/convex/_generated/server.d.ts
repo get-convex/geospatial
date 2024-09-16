@@ -204,17 +204,12 @@ export declare const components: {
         "query",
         "internal",
         {
+          cursor?: string;
           maxResolution: number;
           query: {
             filtering: Array<{
               filterKey: string;
-              filterValue:
-                | string
-                | number
-                | boolean
-                | ArrayBuffer
-                | null
-                | bigint;
+              filterValue: string | number | boolean | null | bigint;
               occur: "should" | "must";
             }>;
             maxResults: number;
@@ -229,10 +224,13 @@ export declare const components: {
             };
           };
         },
-        Array<{
-          coordinates: { latitude: number; longitude: number };
-          key: string;
-        }>
+        {
+          nextCursor?: string;
+          results: Array<{
+            coordinates: { latitude: number; longitude: number };
+            key: string;
+          }>;
+        }
       >;
     };
   };

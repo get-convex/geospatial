@@ -1,6 +1,7 @@
 import { QueryCtx } from "../_generated/server.js";
+import { get } from "../counter.js";
 import { Interval } from "../lib/interval.js";
-import { Primitive } from "../lib/primitive.js";
+import { Primitive, toKey as serialize } from "../lib/primitive.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
 import { PointSet, Stats } from "./zigzag.js";
 
@@ -14,8 +15,9 @@ export class FilterKeyRange implements PointSet {
     private ctx: QueryCtx,
     private filterKey: string,
     private filterValue: Primitive,
+    private cursor: TupleKey | undefined,
     private interval: Interval,
-    private batchSize: number,
+    private prefetchSize: number,
     private stats: Stats,
   ) {}
 
@@ -34,7 +36,9 @@ export class FilterKeyRange implements PointSet {
           .eq("filterKey", this.filterKey)
           .eq("filterValue", this.filterValue);
         let withStart;
-        if (this.interval.startInclusive !== undefined) {
+        if (this.cursor !== undefined) {
+          withStart = withFilter.gt("tupleKey", this.cursor);
+        } else if (this.interval.startInclusive !== undefined) {
           const bound = encodeBound(this.interval.startInclusive);
           withStart = withFilter.gte("tupleKey", bound);
         } else {
@@ -49,7 +53,7 @@ export class FilterKeyRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -91,7 +95,7 @@ export class FilterKeyRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -136,7 +140,7 @@ export class FilterKeyRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -147,4 +151,16 @@ export class FilterKeyRange implements PointSet {
     const buffer = docs.map((doc) => doc.tupleKey);
     this.state = { type: "buffered", buffer, pos: 0 };
   }
+
+  async sizeHint(): Promise<number> {
+    return await get(this.ctx, filterCounterKey(this.filterKey, this.filterValue));
+  }
+
+  setPrefetch(prefetch: number): void {
+    this.prefetchSize = prefetch;
+  }
+}
+
+export function filterCounterKey(filterKey: string, filterValue: Primitive): string {
+  return 'filter:' + filterKey + ':' + serialize(filterValue);
 }

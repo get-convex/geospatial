@@ -10,6 +10,7 @@
  * @module
  */
 
+import type * as counter from "../counter.js";
 import type * as document from "../document.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_geometry from "../lib/geometry.js";
@@ -38,6 +39,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  counter: typeof counter;
   document: typeof document;
   "lib/d64": typeof lib_d64;
   "lib/geometry": typeof lib_geometry;
@@ -105,17 +107,12 @@ export type Mounts = {
       "query",
       "public",
       {
+        cursor?: string;
         maxResolution: number;
         query: {
           filtering: Array<{
             filterKey: string;
-            filterValue:
-              | string
-              | number
-              | boolean
-              | ArrayBuffer
-              | null
-              | bigint;
+            filterValue: string | number | boolean | null | bigint;
             occur: "should" | "must";
           }>;
           maxResults: number;
@@ -130,10 +127,13 @@ export type Mounts = {
           };
         };
       },
-      Array<{
-        coordinates: { latitude: number; longitude: number };
-        key: string;
-      }>
+      {
+        nextCursor?: string;
+        results: Array<{
+          coordinates: { latitude: number; longitude: number };
+          key: string;
+        }>;
+      }
     >;
   };
 };

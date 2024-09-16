@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { api } from "../convex/_generated/api";
 
@@ -13,11 +13,12 @@ import {
 } from "react-leaflet";
 import { cellToVertexes, vertexToLatLng } from "h3-js";
 import { Icon, LatLng, LatLngExpression } from "leaflet";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQueries, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
+import { Rectangle } from "../../src/component/types.js";
 
 const manhattan = [40.746, -73.985];
 
@@ -51,23 +52,84 @@ function LocationSearch(props: {
       se: latLongToObj(bounds.getSouthEast()),
     };
   }, [bounds]);
-  const results = useQuery(api.search.default, {
-    rectangle,
-    mustFilter: props.mustFilter,
-    shouldFilter: props.shouldFilter,
-    maxRows: 96,
-  });
-  props.setLoading(results === undefined);
 
-  const stickyResults = useRef(results);
-  if (results !== undefined) {
-    stickyResults.current = results;
-  }
-  if (stickyResults.current === undefined) {
-    return null;
-  }
+  const maxRows = 96;
+
+  const h3Cells = useQuery(api.search.h3Cells, {
+    rectangle,
+  });
+  
+  const convex = useConvex();  
+  const [results, setResults] = useState<(Doc<"locations"> & { coordinates: Point })[]>([]);
+  const generationNumber = useRef(0);
+  useEffect(() => {
+    generationNumber.current++;
+    const currentGenerationNumber = generationNumber.current;            
+
+    const queryLoop = async () => {
+      let cursor: string | undefined = undefined;
+      let i = 0;
+      while (true) {        
+        console.log('querying at', cursor);
+        const resp: { rows: (Doc<"locations"> & { coordinates: Point })[], nextCursor: string | undefined } = await convex.query(api.search.execute, {
+          rectangle,          
+          mustFilter: props.mustFilter,
+          shouldFilter: props.shouldFilter,
+          cursor,
+          maxRows,
+        })
+        if (currentGenerationNumber !== generationNumber.current) {
+          console.log('canceled');
+          break;
+       } 
+        if (resp.nextCursor === undefined) {
+          props.setLoading(false);
+          console.log('done');
+          break;
+        }
+        if (resp.nextCursor === cursor) {
+          console.log('cursor did not change', cursor);
+          break;
+        }
+        setResults(results => [...results, ...resp.rows]);
+        cursor = resp.nextCursor;        
+        i++;
+
+        if (i > 10) {
+          console.log('stopping early');
+          break;
+        }
+      }        
+    };
+    props.setLoading(true);
+    setResults([]);
+    void queryLoop();
+    return () => {
+      console.log('unmounting')
+      generationNumber.current++;      
+    }
+  }, [convex, props.setLoading, generationNumber, JSON.stringify({ mustFilter: props.mustFilter, shouldFilter: props.shouldFilter, rectangle })])
+ 
+
+  
+
+  // const results = useQuery(api.search.default, {
+  //   rectangle,
+  //   mustFilter: props.mustFilter,
+  //   shouldFilter: props.shouldFilter,
+  //   maxRows: 96,
+  // });
+  // props.setLoading(results === undefined);
+
+  // const stickyResults = useRef(results);
+  // if (results !== undefined) {
+  //   stickyResults.current = results;
+  // }
+  // if (stickyResults.current === undefined) {
+  //   return null;
+  // }
   const tilingPolygons: number[][][] = [];
-  for (const cell of stickyResults.current.h3Cells) {
+  for (const cell of h3Cells ?? []) {
     const polygon = [];
     for (const vertex of cellToVertexes(cell)) {
       const coords = vertexToLatLng(vertex);
@@ -84,7 +146,7 @@ function LocationSearch(props: {
           positions={polygon as any}
         />
       ))}
-      {stickyResults.current.rows.map((row) => (
+      {results.map((row) => (
         <SearchResult key={row._id} row={row} />
       ))}
     </>

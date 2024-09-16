@@ -1,4 +1,5 @@
 import { QueryCtx } from "../_generated/server.js";
+import { get } from "../counter.js";
 import { Interval } from "../lib/interval.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
 import { PointSet, Stats } from "./zigzag.js";
@@ -12,8 +13,9 @@ export class H3CellRange implements PointSet {
   constructor(
     private ctx: QueryCtx,
     private h3Cell: string,
+    private cursor: TupleKey | undefined,
     private interval: Interval,
-    private batchSize: number,
+    private prefetchSize: number,
     private stats: Stats,
   ) {}
 
@@ -30,7 +32,9 @@ export class H3CellRange implements PointSet {
       .withIndex("h3Cell", (q) => {
         const withH3Cell = q.eq("h3Cell", this.h3Cell);
         let withStart;
-        if (this.interval.startInclusive !== undefined) {
+        if (this.cursor !== undefined) {
+          withStart = withH3Cell.gt("tupleKey", this.cursor);
+        } else if (this.interval.startInclusive !== undefined) {
           const bound = encodeBound(this.interval.startInclusive);
           withStart = withH3Cell.gte("tupleKey", bound);
         } else {
@@ -45,7 +49,7 @@ export class H3CellRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -84,7 +88,7 @@ export class H3CellRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -126,7 +130,7 @@ export class H3CellRange implements PointSet {
         }
         return withEnd;
       })
-      .take(this.batchSize);
+      .take(this.prefetchSize);
     this.stats.queriesIssued++;
     this.stats.rowsRead += docs.length;
 
@@ -137,4 +141,16 @@ export class H3CellRange implements PointSet {
     const buffer = docs.map((doc) => doc.tupleKey);
     this.state = { type: "buffered", buffer, pos: 0 };
   }
+
+  async sizeHint(): Promise<number> {
+    return await get(this.ctx, h3CellCounterKey(this.h3Cell));
+  }
+
+  setPrefetch(prefetch: number): void {
+    this.prefetchSize = prefetch;
+  }
+}
+
+export function h3CellCounterKey(h3Cell: string): string {
+  return 'h3:' + h3Cell;
 }

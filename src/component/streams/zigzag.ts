@@ -15,6 +15,16 @@ export interface PointSet {
    * Seek to the given tuple.
    */
   seek(tuple: TupleKey): Promise<void>;
+
+  /**
+   * Estimate on the number of elements in the stream.
+   */
+  sizeHint(): Promise<number>;
+
+  /**
+   * Set number of rows to prefetch after the current position.
+   */
+  setPrefetch(prefetch: number): void;
 }
 
 export type Stats = {

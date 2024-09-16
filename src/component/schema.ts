@@ -20,4 +20,11 @@ export default defineSchema({
     filterValue: primitive,
     tupleKey: v.string(),
   }).index("filterKey", ["filterKey", "filterValue", "tupleKey"]),
+
+  // TODO: Switch this to the component when published.
+  counters: defineTable({
+    key: v.string(),
+    shard: v.number(),
+    value: v.number(),
+  }).index("by_key_and_shard", ["key", "shard"]),  
 });

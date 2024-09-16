@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { Infer, v } from "convex/values";
 import { Point, point, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
 import {
@@ -12,11 +12,11 @@ import { Union } from "./streams/union.js";
 import { FilterKeyRange } from "./streams/filterKeyRange.js";
 import { H3CellRange } from "./streams/h3CellRange.js";
 import { interval } from "./lib/interval.js";
-import { decodeTupleKey } from "./lib/tupleKey.js";
+import { decodeTupleKey, TupleKey } from "./lib/tupleKey.js";
 import { Channel, ChannelClosedError } from "async-channel";
 import { Doc } from "./_generated/dataModel.js";
 
-const BATCH_SIZE = 8;
+export const PREFETCH_SIZE = 16;
 
 const equalityCondition = v.object({
   occur: v.union(v.literal("should"), v.literal("must")),
@@ -52,12 +52,19 @@ export const debugH3Cells = query({
   },
 });
 
+const executeResult = v.object({
+  results: v.array(queryResult),
+  nextCursor: v.optional(v.string()),
+});
+type ExecuteResult = Infer<typeof executeResult>;
+
 export const execute = query({
   args: {
     query: geospatialQuery,
+    cursor: v.optional(v.string()),
     maxResolution: v.number(),
   },
-  returns: v.array(queryResult),
+  returns: executeResult,
   handler: async (ctx, args) => {
     console.time("execute");
     // First, validate the query.
@@ -70,7 +77,7 @@ export const execute = query({
         throw new Error("Invalid interval: start is greater than end");
       }
       if (sorting.interval.startInclusive === sorting.interval.endExclusive) {
-        return [];
+        return { results: [] } as ExecuteResult;
       }
     }
     validateRectangle(args.query.rectangle);
@@ -81,7 +88,7 @@ export const execute = query({
       console.warn(
         `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,
       );
-      return [];
+      return { results: [] } as ExecuteResult;
     }
     const stats: Stats = {
       h3Cells: h3Cells.size,
@@ -91,7 +98,7 @@ export const execute = query({
     };
     const h3SRanges = [...h3Cells].map(
       (h3Cell) =>
-        new H3CellRange(ctx, h3Cell, sorting.interval, BATCH_SIZE, stats),
+        new H3CellRange(ctx, h3Cell, args.cursor, sorting.interval, PREFETCH_SIZE, stats),
     );
     const h3Stream = new Union(h3SRanges);
 
@@ -105,8 +112,9 @@ export const execute = query({
           ctx,
           filter.filterKey,
           filter.filterValue,
+          args.cursor,
           sorting.interval,
-          BATCH_SIZE,
+          PREFETCH_SIZE,
           stats,
         ),
       );
@@ -128,9 +136,9 @@ export const execute = query({
     }
 
     // Finally, consume the stream and fetch the resulting IDs.
-    const channel = new Channel<Promise<Doc<"points"> | null>>(8);
+    const channel = new Channel<{ tupleKey: TupleKey, docPromise: Promise<Doc<"points"> | null> }>(8);
     const producer = async () => {
-      try {
+      try {        
         while (true) {
           const tupleKey = await stream.current();
           if (tupleKey === null) {
@@ -138,7 +146,7 @@ export const execute = query({
           }
           const { pointId } = decodeTupleKey(tupleKey);
           try {
-            await channel.push(ctx.db.get(pointId));
+            await channel.push({ tupleKey, docPromise: ctx.db.get(pointId) });
           } catch (e) {
             if (e instanceof ChannelClosedError) {
               break;
@@ -154,31 +162,43 @@ export const execute = query({
       }
     };
     const results: { key: string; coordinates: Point }[] = [];
+    let nextCursor: TupleKey | undefined = undefined;
     const consumer = async () => {
-      for await (const docPromise of channel) {
-        const doc = await docPromise;
-        if (doc === null) {
-          throw new Error("Internal error: document not found");
-        }
-        if (!rectangleContains(args.query.rectangle, doc.coordinates)) {
-          stats.rowsPostFiltered++;
-          continue;
-        }
-        results.push({
-          key: doc.key,
-          coordinates: doc.coordinates,
-        });
-        if (results.length >= args.query.maxResults) {
+      try {
+        for await (const { tupleKey, docPromise } of channel) {                                  
+          const doc = await docPromise;
+          if (doc === null) {
+            throw new Error("Internal error: document not found");
+          }
+          if (!rectangleContains(args.query.rectangle, doc.coordinates)) {
+            stats.rowsPostFiltered++;
+            continue;
+          }
+          results.push({
+            key: doc.key,
+            coordinates: doc.coordinates,
+          });
+          if (results.length >= args.query.maxResults){          
+            nextCursor = tupleKey;            
+            return;
+          }
+          if (stats.queriesIssued > 128 || stats.rowsRead > 512) {
+            nextCursor = tupleKey;
+            return;
+          }
+        }      
+        nextCursor = undefined;
+        return;
+      } finally {
+        if (!channel.closed) {
           channel.close(true);
-          break;
         }
-      }
-      return results;
+      }    
     };
     await Promise.all([producer(), consumer()]);
     console.log(`Found ${results.length} results (${JSON.stringify(stats)})`);
     console.timeEnd("execute");
 
-    return results;
+    return { results, nextCursor };
   },
 });

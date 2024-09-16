@@ -103,4 +103,17 @@ export class Union implements PointSet {
       }
     }
   }
+
+  async sizeHint(): Promise<number> {
+    // Assume the underlying streams are disjoint (which is true for h3 cells at the same resolution).)
+    const promises = this.streams.map((stream) => stream.sizeHint());
+    const results = await Promise.all(promises);
+    return results.reduce((a, b) => a + b, 0);
+  }
+
+  setPrefetch(prefetch: number): void {
+    for (const stream of this.streams) {
+      stream.setPrefetch(prefetch);
+    }
+  }
 }

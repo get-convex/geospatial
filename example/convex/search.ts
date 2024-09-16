@@ -5,13 +5,23 @@ import { geospatial } from ".";
 import { Id } from "./_generated/dataModel";
 import { rectangle } from "../../src/component/types";
 
-export default query({
+export const execute = query({
   args: {
     rectangle,
     mustFilter: v.array(v.string()),
     shouldFilter: v.array(v.string()),
+    cursor: v.optional(v.string()),
     maxRows: v.number(),
   },
+  returns: v.object({
+    rows: v.array(v.object({
+      _id: v.id("locations"),
+      _creationTime: v.number(),
+      name: v.string(),
+      coordinates: point,
+    })),
+    nextCursor: v.optional(v.string()),
+  }),
   async handler(ctx, args) {
     const mustFilterConditions = args.mustFilter.map((emoji) => ({
       filterKey: "name" as const,
@@ -23,19 +33,14 @@ export default query({
       filterValue: emoji,
       occur: "should" as const,
     }));
-    const results = await geospatial.queryRectangle(
+    const { results, nextCursor } = await geospatial.queryRectangle(
       ctx,
       args.rectangle,
       [...mustFilterConditions, ...shouldFilterConditions],
       {},
-      args.maxRows,
-    );
-
-    const h3Cells = await geospatial.debugH3Cells(
-      ctx,
-      args.rectangle,
-      geospatial.maxResolution,
-    );
+      args.cursor,
+      args.maxRows,      
+    );        
     const coordinatesByKey = new Map<string, Point>();
     const rowFetches = [];
     for (const result of results) {
@@ -53,9 +58,22 @@ export default query({
       const coordinates = coordinatesByKey.get(row._id)!;
       rows.push({ coordinates, ...row });
     }
-    return {
-      h3Cells,
+    return {      
       rows,
+      nextCursor,
     };
+  },
+}); 
+
+export const h3Cells = query({
+  args: {
+    rectangle,
+  },
+  async handler(ctx, args) {
+    return await geospatial.debugH3Cells(
+      ctx,
+      args.rectangle,
+      geospatial.maxResolution,
+    );
   },
 });
