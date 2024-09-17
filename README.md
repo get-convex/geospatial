@@ -189,3 +189,16 @@ const example = query(async (ctx) => {
 ## Example
 
 See `example/` for a full example with a [Leaflet](https://leafletjs.com/)-based frontend.
+
+## Development
+
+Install dependencies and fire up the example app to get started.
+```bash
+npm install
+cd example 
+npm install
+npm run dev
+```
+
+The component definition is in `src/` and reflects what users of the component will install. The example app,
+which is entirely independent, lives in `example/`.
