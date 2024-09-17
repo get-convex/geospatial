@@ -1,6 +1,6 @@
 import { MutationCtx, QueryCtx } from "./_generated/server.js";
 
-const NUM_SHARDS = 8;
+const NUM_SHARDS = 4;
 
 export async function get(ctx: QueryCtx, key: string): Promise<number> {
   let result = 0;
