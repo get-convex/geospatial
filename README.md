@@ -1,9 +1,13 @@
-# Geospatial Index
+# Geospatial Index (Beta)
 
 ![image](https://github.com/user-attachments/assets/864c1785-37fc-4662-841c-a35238792bf4)
 
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
-After installing this component, your Convex deployment will have a key value store that maps string keys to geographic coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
+After installing this component, your Convex deployment will have a key value store that maps string keys to geographic
+coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
+
+This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
+app up to about _300,000_ points, so reach out if you're using a much larger dataset.
 
 ## Installation
 
@@ -46,11 +50,13 @@ currently only support ascending order on the `sortKey`.
 
 const example = mutation(async (ctx) => {
   await geospatialIndex.insert(
-    ctx, "example", {
+    ctx,
+    "example",
+    {
       latitude: 40.7831,
       longitude: -73.9712,
     },
-    { filterExample: "hi"},
+    { filterExample: "hi" },
     10.17,
   );
   const result = await geospatialIndex.get(ctx, "example");
@@ -70,11 +76,13 @@ import type { Point, Primitive, Rectangle } from "../component/types.js";
 type MyDocument = {
   key: "some" | "string" | "subtype";
   coordinates: Point;
-  filterKeys: { filterExample: string, anotherExample?: number };
-  sortKey: number;  
-}
+  filterKeys: { filterExample: string; anotherExample?: number };
+  sortKey: number;
+};
 
-const geospatialIndex = new GeospatialIndex<MyDocument>(components.geospatialIndex);
+const geospatialIndex = new GeospatialIndex<MyDocument>(
+  components.geospatialIndex,
+);
 ```
 
 ## Querying points
@@ -134,9 +142,9 @@ const example = query(async (ctx) => {
     se: { latitude: 41.7831, longitude: -73.9712 },
   };
   const result = await geospatialIndex.queryRectangle(
-    ctx, 
-    rectangle, 
-    [], 
+    ctx,
+    rectangle,
+    [],
     { startInclusive: 10, endExclusive: 20 },
     undefined,
     64,
@@ -149,9 +157,10 @@ Queries take in a `maxRows` parameter, which limits the maximum number of rows r
 the query will return a `nextCursor` for continuation.
 
 The query may also return a `nextCursor` with fewer than `maxRows` results if it runs out of its IO budget
-while executing. 
+while executing.
 
 In either case, you can continue the stream by passing `nextCursor` to the next call's `cursor` parameter.
+
 ```ts
 // convex/index.ts
 
@@ -161,7 +170,7 @@ const example = query(async (ctx) => {
     nw: { latitude: 40.7831, longitude: -72.9712 },
     ne: { latitude: 41.7831, longitude: -72.9712 },
     se: { latitude: 41.7831, longitude: -73.9712 },
-  };  
+  };
   const startCursor = undefined;
   const result = await geospatialIndex.queryRectangle(
     ctx,
@@ -193,9 +202,10 @@ See `example/` for a full example with a [Leaflet](https://leafletjs.com/)-based
 ## Development
 
 Install dependencies and fire up the example app to get started.
+
 ```bash
 npm install
-cd example 
+cd example
 npm install
 npm run dev
 ```
