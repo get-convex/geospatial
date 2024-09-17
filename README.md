@@ -7,7 +7,7 @@ After installing this component, your Convex deployment will have a key value st
 coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
 
 This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
-app up to about _300,000_ points, so reach out if you're using a much larger dataset.
+app up to about 300,000 points, so reach out if you're using a much larger dataset.
 
 ## Installation
 
