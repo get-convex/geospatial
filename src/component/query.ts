@@ -167,7 +167,7 @@ export const execute = query({
         }
       } finally {
         if (!channel.closed) {
-          channel.close(true);
+          channel.close();
         }
       }
     };
@@ -204,7 +204,7 @@ export const execute = query({
         return;
       } finally {
         if (!channel.closed) {
-          channel.close(true);
+          channel.close();
         }
       }
     };

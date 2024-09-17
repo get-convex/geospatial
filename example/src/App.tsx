@@ -131,7 +131,6 @@ function SearchResult(props: {
 }
 
 const emojiFilterItems = [
-  // {value: 'none', label: 'No filter'},
   ...FOOD_EMOJIS.map((emoji) => ({ label: emoji, value: emoji })),
 ];
 

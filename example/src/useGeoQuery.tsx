@@ -84,8 +84,10 @@ export function useGeoQuery(
   }, [queries, argsKey, queryResults]);
   const rows = [];
   let loading = false;
+  let foundAny = false;
   for (const [key, result] of Object.entries(queryResults)) {
     if (key.startsWith(argsKey)) {
+      foundAny = true;
       if (result instanceof Error) {
         throw result;
       }
@@ -95,6 +97,9 @@ export function useGeoQuery(
         loading = true;
       }
     }
+  }
+  if (!foundAny) {
+    loading = true;
   }
   return { rows, loading };
 }
