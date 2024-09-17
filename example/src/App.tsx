@@ -30,7 +30,50 @@ function LocationSearch(props: {
 }) {
   const map = useMap();
   const [bounds, setBounds] = useState(map.getBounds());
-  const addPoint = useMutation(api.addPoint.default);
+  const addPoint = useMutation(api.addPoint.default).withOptimisticUpdate(
+    (store, args) => {
+      const { point, name } = args;
+      for (const { args, value } of store.getAllQueries(api.search.execute)) {
+        console.log("optimistic update", point, name, args, value);
+        if (!value) {
+          continue;
+        }
+        if (args.cursor) {
+          continue;
+        }
+        const { rectangle } = args;
+        if (
+          point.latitude < rectangle.sw.latitude ||
+          point.latitude > rectangle.ne.latitude ||
+          point.longitude < rectangle.sw.longitude ||
+          point.longitude > rectangle.ne.longitude
+        ) {
+          continue;
+        }
+        if (props.mustFilter.length > 0 && props.mustFilter[0] !== name) {
+          continue;
+        }
+        if (
+          props.shouldFilter.length > 0 &&
+          !props.shouldFilter.includes(name)
+        ) {
+          continue;
+        }
+        const newRow = {
+          _id: JSON.stringify(point) as any,
+          _creationTime: 0,
+          name,
+          coordinates: point,
+        };
+        console.log("adding new row", newRow, "to", args);
+        const newValue = {
+          ...value,
+          rows: [...value.rows, newRow],
+        };
+        store.setQuery(api.search.execute, args, newValue);
+      }
+    },
+  );
   useMapEvents({
     moveend: () => {
       setBounds(map.getBounds());
@@ -38,7 +81,11 @@ function LocationSearch(props: {
     contextmenu: (e) => {
       e.originalEvent.preventDefault();
       const latLng = map.mouseEventToLatLng(e.originalEvent);
-      addPoint({ point: { latitude: latLng.lat, longitude: latLng.lng } });
+      const name = FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)];
+      addPoint({
+        point: { latitude: latLng.lat, longitude: latLng.lng },
+        name,
+      });
     },
   });
   const rectangle = useMemo(() => {

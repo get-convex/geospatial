@@ -167,7 +167,9 @@ export const execute = query({
         }
       } finally {
         if (!channel.closed) {
-          channel.close();
+          // Don't clear the channel since we want the consumer to
+          // still be able to process buffered elements we emitted.
+          channel.close(false);
         }
       }
     };
@@ -204,7 +206,9 @@ export const execute = query({
         return;
       } finally {
         if (!channel.closed) {
-          channel.close();
+          // Discard all buffered items when the consumer closes the channel,
+          // which will wake up the producer.
+          channel.close(true);
         }
       }
     };

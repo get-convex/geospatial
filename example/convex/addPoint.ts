@@ -10,9 +10,8 @@ import { internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
 
 export default mutation({
-  args: { point },
-  handler: async (ctx, { point }) => {
-    const name = FOOD_EMOJIS[Math.floor(Math.random() * FOOD_EMOJIS.length)];
+  args: { point, name: v.string() },
+  handler: async (ctx, { point, name }) => {
     const id = await ctx.db.insert("locations", {
       name,
     });
