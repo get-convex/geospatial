@@ -18,6 +18,7 @@ import type * as lib_interval from "../lib/interval.js";
 import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
 import type * as query from "../query.js";
+import type * as streams_databaseRange from "../streams/databaseRange.js";
 import type * as streams_filterKeyRange from "../streams/filterKeyRange.js";
 import type * as streams_h3CellRange from "../streams/h3CellRange.js";
 import type * as streams_intersection from "../streams/intersection.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   "lib/primitive": typeof lib_primitive;
   "lib/tupleKey": typeof lib_tupleKey;
   query: typeof query;
+  "streams/databaseRange": typeof streams_databaseRange;
   "streams/filterKeyRange": typeof streams_filterKeyRange;
   "streams/h3CellRange": typeof streams_h3CellRange;
   "streams/intersection": typeof streams_intersection;

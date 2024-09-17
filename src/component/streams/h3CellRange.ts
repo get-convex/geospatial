@@ -1,32 +1,22 @@
 import { QueryCtx } from "../_generated/server.js";
-import { get } from "../counter.js";
 import { Interval } from "../lib/interval.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
-import { PointSet, Stats } from "./zigzag.js";
+import { DatabaseRange } from "./databaseRange.js";
+import { Stats } from "./zigzag.js";
 
-export class H3CellRange implements PointSet {
-  private state:
-    | { type: "init" }
-    | { type: "buffered"; buffer: TupleKey[]; pos: number }
-    | { type: "done" } = { type: "init" };
-
+export class H3CellRange extends DatabaseRange {
   constructor(
-    private ctx: QueryCtx,
+    ctx: QueryCtx,
     private h3Cell: string,
-    private cursor: TupleKey | undefined,
-    private interval: Interval,
-    private prefetchSize: number,
-    private stats: Stats,
-  ) {}
+    cursor: TupleKey | undefined,
+    interval: Interval,
+    prefetchSize: number,
+    stats: Stats,
+  ) {
+    super(ctx, cursor, interval, prefetchSize, stats);
+  }
 
-  async current(): Promise<TupleKey | null> {
-    if (this.state.type === "done") {
-      return null;
-    }
-    if (this.state.type === "buffered") {
-      return this.state.buffer[this.state.pos];
-    }
-
+  async initialQuery(): Promise<TupleKey[]> {
     const docs = await this.ctx.db
       .query("pointsbyH3Cell")
       .withIndex("h3Cell", (q) => {
@@ -50,31 +40,10 @@ export class H3CellRange implements PointSet {
         return withEnd;
       })
       .take(this.prefetchSize);
-    this.stats.queriesIssued++;
-    this.stats.rowsRead += docs.length;
-
-    if (docs.length === 0) {
-      this.state = { type: "done" };
-      return null;
-    }
-    const buffer = docs.map((doc) => doc.tupleKey);
-    this.state = { type: "buffered", buffer, pos: 0 };
-    return this.state.buffer[0];
+    return docs.map((doc) => doc.tupleKey);
   }
 
-  async advance(): Promise<TupleKey | null> {
-    if (this.state.type === "done") {
-      return null;
-    }
-    if (this.state.type === "init") {
-      await this.current();
-      return await this.advance();
-    }
-    if (this.state.pos < this.state.buffer.length - 1) {
-      this.state.pos++;
-      return this.state.buffer[this.state.pos];
-    }
-    const lastKey = this.state.buffer[this.state.buffer.length - 1];
+  async advanceQuery(lastKey: TupleKey): Promise<TupleKey[]> {
     const docs = await this.ctx.db
       .query("pointsbyH3Cell")
       .withIndex("h3Cell", (q) => {
@@ -89,34 +58,10 @@ export class H3CellRange implements PointSet {
         return withEnd;
       })
       .take(this.prefetchSize);
-    this.stats.queriesIssued++;
-    this.stats.rowsRead += docs.length;
-
-    if (docs.length === 0) {
-      this.state = { type: "done" };
-      return null;
-    }
-    const buffer = docs.map((doc) => doc.tupleKey);
-    this.state = { type: "buffered", buffer, pos: 0 };
-    return this.state.buffer[0];
+    return docs.map((doc) => doc.tupleKey);
   }
 
-  async seek(tuple: TupleKey): Promise<void> {
-    if (this.state.type === "init") {
-      await this.current();
-      return await this.seek(tuple);
-    }
-    if (this.state.type === "done") {
-      return;
-    }
-    if (tuple < this.state.buffer[0]) {
-      return;
-    }
-    if (tuple <= this.state.buffer[this.state.buffer.length - 1]) {
-      const newPos = this.state.buffer.findIndex((key) => key >= tuple);
-      this.state.pos = Math.max(newPos, this.state.pos);
-      return;
-    }
+  async seekQuery(tuple: TupleKey): Promise<TupleKey[]> {
     const docs = await this.ctx.db
       .query("pointsbyH3Cell")
       .withIndex("h3Cell", (q) => {
@@ -131,23 +76,11 @@ export class H3CellRange implements PointSet {
         return withEnd;
       })
       .take(this.prefetchSize);
-    this.stats.queriesIssued++;
-    this.stats.rowsRead += docs.length;
-
-    if (docs.length === 0) {
-      this.state = { type: "done" };
-      return;
-    }
-    const buffer = docs.map((doc) => doc.tupleKey);
-    this.state = { type: "buffered", buffer, pos: 0 };
+    return docs.map((doc) => doc.tupleKey);
   }
 
-  async sizeHint(): Promise<number> {
-    return await get(this.ctx, h3CellCounterKey(this.h3Cell));
-  }
-
-  setPrefetch(prefetch: number): void {
-    this.prefetchSize = prefetch;
+  getCounterKey(): string {
+    return h3CellCounterKey(this.h3Cell);
   }
 }
 
