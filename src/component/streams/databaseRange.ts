@@ -1,17 +1,19 @@
 import { QueryCtx } from "../_generated/server.js";
 import { get } from "../counter.js";
 import { Interval } from "../lib/interval.js";
+import { Logger } from "../lib/logging.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
 import { PointSet, Stats } from "./zigzag.js";
 
 export abstract class DatabaseRange implements PointSet {
-  protected state:
+  private state:
     | { type: "init" }
     | { type: "buffered"; buffer: TupleKey[]; pos: number }
     | { type: "done" } = { type: "init" };
 
   constructor(
     protected ctx: QueryCtx,
+    protected logger: Logger,
     protected cursor: TupleKey | undefined,
     protected interval: Interval,
     protected prefetchSize: number,
@@ -95,7 +97,9 @@ export abstract class DatabaseRange implements PointSet {
   }
 
   async sizeHint(): Promise<number> {
-    return await get(this.ctx, this.getCounterKey());
+    const count = await get(this.ctx, this.getCounterKey());
+    this.logger.debug(`Size hint for ${this.getCounterKey()} is ${count}`);
+    return count;
   }
 
   setPrefetch(prefetch: number): void {

@@ -15,6 +15,7 @@ import type * as document from "../document.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_geometry from "../lib/geometry.js";
 import type * as lib_interval from "../lib/interval.js";
+import type * as lib_logging from "../lib/logging.js";
 import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
 import type * as query from "../query.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "lib/d64": typeof lib_d64;
   "lib/geometry": typeof lib_geometry;
   "lib/interval": typeof lib_interval;
+  "lib/logging": typeof lib_logging;
   "lib/primitive": typeof lib_primitive;
   "lib/tupleKey": typeof lib_tupleKey;
   query: typeof query;
@@ -110,6 +112,7 @@ export type Mounts = {
       "public",
       {
         cursor?: string;
+        logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
         maxResolution: number;
         query: {
           filtering: Array<{

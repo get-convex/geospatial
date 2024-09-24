@@ -8,6 +8,7 @@ import {
   UNITS,
 } from "h3-js";
 import { Point, pointToArray, Rectangle } from "../types.js";
+import { Logger } from "./logging.js";
 
 export function latLngToCells(maxResolution: number, point: Point) {
   const leafCell = latLngToCell(
@@ -73,6 +74,7 @@ export function validateRectangle(rectangle: Rectangle) {
 }
 
 export function coverRectangle(
+  logger: Logger,
   rectangle: Rectangle,
   maxResolution: number,
 ): Set<string> | null {
@@ -84,20 +86,28 @@ export function coverRectangle(
     pointToArray(rectangle.nw),
     UNITS.m,
   );
+  logger.debug(`Rectangle height: ${rectangleHeight}m`);
+
   const rectangleWidth = greatCircleDistance(
     pointToArray(rectangle.sw),
     pointToArray(rectangle.se),
     UNITS.m,
   );
+  logger.debug(`Rectangle width: ${rectangleWidth}m`);
+
   const averageDimension = (rectangleHeight + rectangleWidth) / 2;
+  logger.debug(`Average dimension: ${averageDimension}m`);
+
   let resolution = maxResolution;
   for (; resolution >= 0; resolution--) {
     const hexWidth = getHexagonEdgeLengthAvg(resolution, UNITS.m);
     if (hexWidth / averageDimension > 0.1) {
+      logger.debug(
+        `Choosing resolution ${resolution} with hexagon width ${hexWidth}m`,
+      );
       break;
     }
   }
-
   const h3Polygon = [
     pointToArray(rectangle.sw),
     pointToArray(rectangle.nw),
@@ -107,6 +117,9 @@ export function coverRectangle(
   let h3InteriorCells = polygonToCells(h3Polygon, resolution);
   while (!h3InteriorCells.length) {
     if (resolution > maxResolution) {
+      logger.debug(
+        `Failed to find interior cells with max resolution ${maxResolution}`,
+      );
       return null;
     }
     resolution++;
@@ -124,5 +137,6 @@ export function coverRectangle(
       h3CellSet.add(neighbor);
     }
   }
+  logger.debug(`Found ${h3CellSet.size} interior cells`, h3CellSet);
   return h3CellSet;
 }

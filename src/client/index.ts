@@ -10,6 +10,7 @@ import { GenericId } from "convex/values";
 import type { api } from "../component/_generated/api.js";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
 import { point } from "../component/types.js";
+import { LogLevel } from "../component/lib/logging.js";
 
 export type { Point };
 export { point };
@@ -35,6 +36,9 @@ export type GeospatialDocument = {
 export class GeospatialIndex<
   Doc extends GeospatialDocument = GeospatialDocument,
 > {
+  logLevel: LogLevel;
+  maxResolution: number;
+
   /**
    * Create a new geospatial index, powered by H3 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
@@ -46,8 +50,27 @@ export class GeospatialIndex<
    */
   constructor(
     private component: UseApi<typeof api>,
-    public maxResolution: number = DEFAULT_MAX_RESOLUTION,
-  ) {}
+    options?: {
+      maxResolution?: number;
+      logLevel?: LogLevel;
+    },
+  ) {
+    let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
+    if (process.env.ACTION_RETRIER_LOG_LEVEL) {
+      if (
+        !["DEBUG", "INFO", "WARN", "ERROR"].includes(
+          process.env.ACTION_RETRIER_LOG_LEVEL,
+        )
+      ) {
+        console.warn(
+          `Invalid log level (${process.env.ACTION_RETRIER_LOG_LEVEL}), defaulting to "INFO"`,
+        );
+      }
+      DEFAULT_LOG_LEVEL = process.env.ACTION_RETRIER_LOG_LEVEL as LogLevel;
+    }
+    this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
+    this.maxResolution = options?.maxResolution ?? DEFAULT_MAX_RESOLUTION;
+  }
 
   /**
    * Insert a new key-coordinate pair into the index.
@@ -138,6 +161,7 @@ export class GeospatialIndex<
       },
       cursor,
       maxResolution: this.maxResolution,
+      logLevel: this.logLevel,
     });
     return resp;
   }

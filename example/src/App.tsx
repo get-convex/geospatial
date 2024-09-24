@@ -126,22 +126,29 @@ function LocationSearch(props: {
     stickyRows.current = rows;
   }
 
-  const tilingPolygons: number[][][] = [];
+  const tilingPolygons: { polygon: number[][][]; cell: string }[] = [];
   for (const cell of stickyH3Cells.current) {
     const polygon = [];
     for (const vertex of cellToVertexes(cell)) {
       const coords = vertexToLatLng(vertex);
       polygon.push(coords);
     }
-    tilingPolygons.push(polygon);
+    tilingPolygons.push({ polygon: [polygon], cell });
   }
   return (
     <>
-      {tilingPolygons.map((polygon, i) => (
+      {tilingPolygons.map(({ polygon, cell }, i) => (
         <Polygon
+          attribution={cell}
           key={i}
-          pathOptions={{ color: "blue" }}
+          pathOptions={{ color: "blue", lineCap: "round", lineJoin: "bevel" }}
           positions={polygon as any}
+          eventHandlers={{
+            click: (e) => {
+              e.originalEvent.preventDefault();
+              console.log(`Clicked on cell ${cell}`);
+            },
+          }}
         />
       ))}
       {stickyRows.current.map((row) => (

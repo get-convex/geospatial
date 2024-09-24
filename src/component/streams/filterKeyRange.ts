@@ -1,5 +1,6 @@
 import { QueryCtx } from "../_generated/server.js";
 import { Interval } from "../lib/interval.js";
+import { Logger } from "../lib/logging.js";
 import { Primitive, toKey as serialize } from "../lib/primitive.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
 import { DatabaseRange } from "./databaseRange.js";
@@ -8,6 +9,7 @@ import { Stats } from "./zigzag.js";
 export class FilterKeyRange extends DatabaseRange {
   constructor(
     ctx: QueryCtx,
+    logger: Logger,
     private filterKey: string,
     private filterValue: Primitive,
     cursor: TupleKey | undefined,
@@ -15,7 +17,7 @@ export class FilterKeyRange extends DatabaseRange {
     prefetchSize: number,
     stats: Stats,
   ) {
-    super(ctx, cursor, interval, prefetchSize, stats);
+    super(ctx, logger, cursor, interval, prefetchSize, stats);
   }
 
   async initialQuery(): Promise<TupleKey[]> {
@@ -44,6 +46,9 @@ export class FilterKeyRange extends DatabaseRange {
         return withEnd;
       })
       .take(this.prefetchSize);
+    this.logger.debug(
+      `Initial query for filter key ${this.filterKey} returned ${docs.length} results`,
+    );
     return docs.map((doc) => doc.tupleKey);
   }
 
@@ -65,6 +70,9 @@ export class FilterKeyRange extends DatabaseRange {
         return withEnd;
       })
       .take(this.prefetchSize);
+    this.logger.debug(
+      `Advance query for filter key ${this.filterKey} returned ${docs.length} results`,
+    );
     return docs.map((doc) => doc.tupleKey);
   }
 
@@ -86,6 +94,9 @@ export class FilterKeyRange extends DatabaseRange {
         return withEnd;
       })
       .take(this.prefetchSize);
+    this.logger.debug(
+      `Seek query for filter key ${this.filterKey} returned ${docs.length} results`,
+    );
     return docs.map((doc) => doc.tupleKey);
   }
 

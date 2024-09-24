@@ -15,6 +15,7 @@ import { interval } from "./lib/interval.js";
 import { decodeTupleKey, TupleKey } from "./lib/tupleKey.js";
 import { Channel, ChannelClosedError } from "async-channel";
 import { Doc } from "./_generated/dataModel.js";
+import { createLogger, logLevel } from "./lib/logging.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -47,7 +48,8 @@ export const debugH3Cells = query({
   },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
-    const h3Cells = coverRectangle(args.rectangle, args.maxResolution);
+    const logger = createLogger("ERROR");
+    const h3Cells = coverRectangle(logger, args.rectangle, args.maxResolution);
     return h3Cells ? [...h3Cells] : [];
   },
 });
@@ -63,10 +65,13 @@ export const execute = query({
     query: geospatialQuery,
     cursor: v.optional(v.string()),
     maxResolution: v.number(),
+    logLevel,
   },
   returns: executeResult,
   handler: async (ctx, args) => {
-    console.time("execute");
+    const logger = createLogger(args.logLevel);
+
+    logger.time("execute");
     // First, validate the query.
     const { sorting } = args.query;
     if (
@@ -77,15 +82,20 @@ export const execute = query({
         throw new Error("Invalid interval: start is greater than end");
       }
       if (sorting.interval.startInclusive === sorting.interval.endExclusive) {
+        logger.debug("Interval is empty, returning no results");
         return { results: [] } as ExecuteResult;
       }
     }
     validateRectangle(args.query.rectangle);
 
     // Second, convert the rectangle to a set of H3 cells.
-    const h3Cells = coverRectangle(args.query.rectangle, args.maxResolution);
+    const h3Cells = coverRectangle(
+      logger,
+      args.query.rectangle,
+      args.maxResolution,
+    );
     if (!h3Cells) {
-      console.warn(
+      logger.warn(
         `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,
       );
       return { results: [] } as ExecuteResult;
@@ -100,6 +110,7 @@ export const execute = query({
       (h3Cell) =>
         new H3CellRange(
           ctx,
+          logger,
           h3Cell,
           args.cursor,
           sorting.interval,
@@ -117,6 +128,7 @@ export const execute = query({
       ranges.push(
         new FilterKeyRange(
           ctx,
+          logger,
           filter.filterKey,
           filter.filterValue,
           args.cursor,
@@ -172,6 +184,7 @@ export const execute = query({
           channel.close(false);
         }
       }
+      logger.debug("Producer shutting down");
     };
     const results: { key: string; coordinates: Point }[] = [];
     let nextCursor: TupleKey | undefined = undefined;
@@ -191,17 +204,21 @@ export const execute = query({
             coordinates: doc.coordinates,
           });
           if (results.length >= args.query.maxResults) {
+            logger.debug(
+              `Consumer reached max results of ${args.query.maxResults} at ${tupleKey}`,
+            );
             nextCursor = tupleKey;
             return;
           }
           if (stats.rowsRead >= 1024) {
-            console.warn(
-              `Reached Convex query limit of 1024 rows at ${tupleKey}`,
+            logger.warn(
+              `Consumer reached Convex query limit of 1024 rows at ${tupleKey}`,
             );
             nextCursor = tupleKey;
             return;
           }
         }
+        logger.debug(`Consumer reached end of stream`);
         nextCursor = undefined;
         return;
       } finally {
@@ -213,8 +230,8 @@ export const execute = query({
       }
     };
     await Promise.all([producer(), consumer()]);
-    console.log(`Found ${results.length} results (${JSON.stringify(stats)})`);
-    console.timeEnd("execute");
+    logger.info(`Found ${results.length} results (${JSON.stringify(stats)})`);
+    logger.timeEnd("execute");
 
     return { results, nextCursor };
   },

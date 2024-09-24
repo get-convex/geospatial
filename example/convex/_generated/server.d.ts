@@ -205,6 +205,7 @@ export declare const components: {
         "internal",
         {
           cursor?: string;
+          logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
           maxResolution: number;
           query: {
             filtering: Array<{
