@@ -1,6 +1,6 @@
 import { GeospatialIndex, Point } from "../../src/client";
 import { Id } from "./_generated/dataModel";
-import { components } from "./_generated/server";
+import { components } from "./_generated/api";
 
 type EmojiLocation = {
   key: Id<"locations">;

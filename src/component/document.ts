@@ -5,7 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server.js";
-import { point, primitive, recordValidator } from "./types.js";
+import { point, primitive } from "./types.js";
 import { latLngToCells } from "./lib/geometry.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
 import { increment } from "./counter.js";
@@ -17,10 +17,7 @@ const geoDocument = v.object({
   key: v.string(),
   coordinates: point,
   sortKey: v.number(),
-  filterKeys: recordValidator(
-    v.string(),
-    v.union(primitive, v.array(primitive)),
-  ),
+  filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
 });
 
 export const insert = mutation({

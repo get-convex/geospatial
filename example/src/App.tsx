@@ -12,7 +12,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { cellToVertexes, vertexToLatLng } from "h3-js";
-import { Icon, LatLng, LatLngExpression } from "leaflet";
+import { Icon, LatLngExpression } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
@@ -43,10 +43,10 @@ function LocationSearch(props: {
         }
         const { rectangle } = args;
         if (
-          point.latitude < rectangle.sw.latitude ||
-          point.latitude > rectangle.ne.latitude ||
-          point.longitude < rectangle.sw.longitude ||
-          point.longitude > rectangle.ne.longitude
+          point.latitude < rectangle.south ||
+          point.latitude > rectangle.north ||
+          point.longitude < rectangle.west ||
+          point.longitude > rectangle.east
         ) {
           continue;
         }
@@ -89,15 +89,11 @@ function LocationSearch(props: {
     },
   });
   const rectangle = useMemo(() => {
-    const latLongToObj = (latLong: LatLng) => ({
-      latitude: latLong.lat,
-      longitude: latLong.lng,
-    });
     return {
-      sw: latLongToObj(bounds.getSouthWest()),
-      nw: latLongToObj(bounds.getNorthWest()),
-      ne: latLongToObj(bounds.getNorthEast()),
-      se: latLongToObj(bounds.getSouthEast()),
+      west: bounds.getWest(),
+      east: bounds.getEast(),
+      south: bounds.getSouth(),
+      north: bounds.getNorth(),
     };
   }, [bounds]);
 
@@ -139,7 +135,6 @@ function LocationSearch(props: {
     <>
       {tilingPolygons.map(({ polygon, cell }, i) => (
         <Polygon
-          attribution={cell}
           key={i}
           pathOptions={{ color: "blue", lineCap: "round", lineJoin: "bevel" }}
           positions={polygon as any}

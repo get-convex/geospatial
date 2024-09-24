@@ -7,7 +7,12 @@ import {
   polygonToCells,
   UNITS,
 } from "h3-js";
-import { Point, pointToArray, Rectangle } from "../types.js";
+import {
+  Point,
+  pointToArray,
+  Rectangle,
+  rectangleToPolygon,
+} from "../types.js";
 import { Logger } from "./logging.js";
 
 export function latLngToCells(maxResolution: number, point: Point) {
@@ -46,29 +51,14 @@ export function polygonContains(point: Point, polygon: Point[]) {
 }
 
 export function rectangleContains(rectangle: Rectangle, point: Point) {
-  return polygonContains(point, [
-    rectangle.sw,
-    rectangle.se,
-    rectangle.ne,
-    rectangle.nw,
-  ]);
+  return polygonContains(point, rectangleToPolygon(rectangle));
 }
 
 export function validateRectangle(rectangle: Rectangle) {
-  const { sw, nw, ne, se } = rectangle;
-
-  if (sw.longitude !== nw.longitude || se.longitude !== ne.longitude) {
-    throw new Error("Invalid rectangle: longitudes for side edges must match");
-  }
-  if (sw.longitude > se.longitude) {
+  if (rectangle.west > rectangle.east) {
     throw new Error("Left edge of rectangle must be before right edge");
   }
-  if (sw.latitude !== se.latitude || nw.latitude !== ne.latitude) {
-    throw new Error(
-      "Invalid rectangle: latitudes for top and bottom edges must match",
-    );
-  }
-  if (sw.latitude > nw.latitude) {
+  if (rectangle.south > rectangle.north) {
     throw new Error("Bottom edge of rectangle must be below top edge");
   }
 }
@@ -82,15 +72,15 @@ export function coverRectangle(
   // We don't have to be precise here, but going too large will increase the number of cells
   // we query, while going too small will cause us to overfetch and post-filter more.
   const rectangleHeight = greatCircleDistance(
-    pointToArray(rectangle.sw),
-    pointToArray(rectangle.nw),
+    [rectangle.south, rectangle.west],
+    [rectangle.north, rectangle.west],
     UNITS.m,
   );
   logger.debug(`Rectangle height: ${rectangleHeight}m`);
 
   const rectangleWidth = greatCircleDistance(
-    pointToArray(rectangle.sw),
-    pointToArray(rectangle.se),
+    [rectangle.south, rectangle.west],
+    [rectangle.south, rectangle.east],
     UNITS.m,
   );
   logger.debug(`Rectangle width: ${rectangleWidth}m`);
@@ -108,12 +98,7 @@ export function coverRectangle(
       break;
     }
   }
-  const h3Polygon = [
-    pointToArray(rectangle.sw),
-    pointToArray(rectangle.nw),
-    pointToArray(rectangle.ne),
-    pointToArray(rectangle.se),
-  ];
+  const h3Polygon = rectangleToPolygon(rectangle).map(pointToArray);
   let h3InteriorCells = polygonToCells(h3Polygon, resolution);
   while (!h3InteriorCells.length) {
     if (resolution > maxResolution) {

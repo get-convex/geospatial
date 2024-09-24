@@ -66,7 +66,15 @@ export type Mounts = {
       { key: string },
       {
         coordinates: { latitude: number; longitude: number };
-        filterKeys: any;
+        filterKeys: Record<
+          string,
+          | string
+          | number
+          | boolean
+          | null
+          | bigint
+          | Array<string | number | boolean | null | bigint>
+        >;
         key: string;
         sortKey: number;
       } | null
@@ -77,7 +85,15 @@ export type Mounts = {
       {
         document: {
           coordinates: { latitude: number; longitude: number };
-          filterKeys: any;
+          filterKeys: Record<
+            string,
+            | string
+            | number
+            | boolean
+            | null
+            | bigint
+            | Array<string | number | boolean | null | bigint>
+          >;
           key: string;
           sortKey: number;
         };
@@ -98,12 +114,7 @@ export type Mounts = {
       "public",
       {
         maxResolution: number;
-        rectangle: {
-          ne: { latitude: number; longitude: number };
-          nw: { latitude: number; longitude: number };
-          se: { latitude: number; longitude: number };
-          sw: { latitude: number; longitude: number };
-        };
+        rectangle: { east: number; north: number; south: number; west: number };
       },
       Array<string>
     >;
@@ -122,10 +133,10 @@ export type Mounts = {
           }>;
           maxResults: number;
           rectangle: {
-            ne: { latitude: number; longitude: number };
-            nw: { latitude: number; longitude: number };
-            se: { latitude: number; longitude: number };
-            sw: { latitude: number; longitude: number };
+            east: number;
+            north: number;
+            south: number;
+            west: number;
           };
           sorting: {
             interval: { endExclusive?: number; startInclusive?: number };
@@ -155,5 +166,7 @@ export declare const internal: FilterApi<
   typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};
 
 /* prettier-ignore-end */
