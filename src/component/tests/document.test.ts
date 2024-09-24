@@ -5,7 +5,7 @@ import schema from "../schema.js";
 import { modules } from "../test.setup.js";
 import { decodeTupleKey } from "../lib/tupleKey.js";
 import { test as fcTest, fc } from "@fast-check/vitest";
-import { arbitraryDocuments, arbitraryResolution } from "./arbitrary.test.js";
+import { arbitraryDocuments, arbitraryResolution } from "./arbitrary.helpers.js";
 
 test("CRUD operations", async () => {
   const t = convexTest(schema, modules);
