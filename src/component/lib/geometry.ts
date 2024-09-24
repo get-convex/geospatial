@@ -1,6 +1,10 @@
 import {
+  cellToBoundary,
+  cellToChildren,
   cellToParent,
   getHexagonEdgeLengthAvg,
+  getRes0Cells,
+  getResolution,
   greatCircleDistance,
   gridDisk,
   latLngToCell,
@@ -11,9 +15,11 @@ import {
   Point,
   pointToArray,
   Rectangle,
+  rectangleToGeoJSON,
   rectangleToPolygon,
 } from "../types.js";
 import { Logger } from "./logging.js";
+import * as turf from "@turf/turf"
 
 export function latLngToCells(maxResolution: number, point: Point) {
   const leafCell = latLngToCell(
@@ -54,74 +60,102 @@ export function rectangleContains(rectangle: Rectangle, point: Point) {
   return polygonContains(point, rectangleToPolygon(rectangle));
 }
 
-export function validateRectangle(rectangle: Rectangle) {
-  if (rectangle.west > rectangle.east) {
-    throw new Error("Left edge of rectangle must be before right edge");
+function validateLatitude(latitude: number) {
+  if (latitude < -90 || latitude > 90) {
+    throw new Error("Latitude must be between -90 and 90");
   }
+}
+
+function validateLongitude(longitude: number) {
+  if (longitude < -180 || longitude > 180) {
+    throw new Error("Longitude must be between -180 and 180");
+  }
+}
+export function validateRectangle(rectangle: Rectangle) {  
   if (rectangle.south > rectangle.north) {
     throw new Error("Bottom edge of rectangle must be below top edge");
   }
+  validateLatitude(rectangle.south);
+  validateLatitude(rectangle.north);
+  validateLongitude(rectangle.west);
+  validateLongitude(rectangle.east);
 }
 
 export function coverRectangle(
   logger: Logger,
   rectangle: Rectangle,
   maxResolution: number,
-): Set<string> | null {
-  // Pick a resolution that's about 10% of the average of the rectangle's width and height.
-  // We don't have to be precise here, but going too large will increase the number of cells
-  // we query, while going too small will cause us to overfetch and post-filter more.
-  const rectangleHeight = greatCircleDistance(
-    [rectangle.south, rectangle.west],
-    [rectangle.north, rectangle.west],
-    UNITS.m,
-  );
-  logger.debug(`Rectangle height: ${rectangleHeight}m`);
-
-  const rectangleWidth = greatCircleDistance(
-    [rectangle.south, rectangle.west],
-    [rectangle.south, rectangle.east],
-    UNITS.m,
-  );
-  logger.debug(`Rectangle width: ${rectangleWidth}m`);
-
-  const averageDimension = (rectangleHeight + rectangleWidth) / 2;
-  logger.debug(`Average dimension: ${averageDimension}m`);
-
-  let resolution = maxResolution;
-  for (; resolution >= 0; resolution--) {
-    const hexWidth = getHexagonEdgeLengthAvg(resolution, UNITS.m);
-    if (hexWidth / averageDimension > 0.1) {
-      logger.debug(
-        `Choosing resolution ${resolution} with hexagon width ${hexWidth}m`,
-      );
-      break;
-    }
+  minOverlap: number = 0.25,
+): Set<string> {
+  if (maxResolution < 0 || maxResolution > 15) {
+    throw new Error('maxResolution must be between 0 and 15.');
   }
-  const h3Polygon = rectangleToPolygon(rectangle).map(pointToArray);
-  let h3InteriorCells = polygonToCells(h3Polygon, resolution);
-  while (!h3InteriorCells.length) {
-    if (resolution > maxResolution) {
-      logger.debug(
-        `Failed to find interior cells with max resolution ${maxResolution}`,
-      );
-      return null;
-    }
-    resolution++;
-    h3InteriorCells = polygonToCells(h3Polygon, resolution);
+  if (minOverlap < 0 || minOverlap > 1) {
+    throw new Error('minOverlap must be between 0 and 1.');
   }
+  if (rectangle.east < rectangle.west) {
+    throw new Error("TODO: East must be greater than West");
+  }  
+  const rectanglePolygon = turf.polygon([rectangleToGeoJSON(rectangle)]);
 
-  const h3CellSet = new Set<string>();
-  for (const cell of h3InteriorCells) {
-    h3CellSet.add(cell);
+  const cells = new Set<string>();
+  const queue = getRes0Cells();
 
-    // `polygonToCells` only returns the set of cells whose centroids are within
-    // the polygon. We also want to include cells that are adjacent to the polygon.
-    // TODO: Prove that adding adjacent neighbors is sufficient.
-    for (const neighbor of gridDisk(cell, 1)) {
-      h3CellSet.add(neighbor);
+  while (queue.length) {
+    const cell = queue.shift()!;
+    const currentResolution = getResolution(cell);    
+    const cellPolygon = turf.polygon([cellToBoundary(cell, true)]);
+
+    // If the current cell is entirely within the rectangle, add it to the set
+    // and stop recursing.
+    if (turf.booleanContains(rectanglePolygon, cellPolygon)) {
+      logger.debug(`Cell ${cell} is entirely within the rectangle`);
+      cells.add(cell);
+      continue;
     }
+
+    // If the rectangle is completely within the cell, unconditionally recurse.
+    if (turf.booleanContains(cellPolygon, rectanglePolygon)) {      
+      if (currentResolution >= maxResolution) { 
+        throw new Error(`Rectangle fully contained by cell at resolution ${maxResolution}`);
+      }
+      const childCells = new Set<string>();
+      for (const child of cellToChildren(cell, currentResolution + 1)) {
+        for (const neighbor of gridDisk(child, 1)) {
+          childCells.add(neighbor);
+        }
+      }
+      queue.push(...childCells);
+      continue;
+    }
+
+    // Drop the current cell if it doesn't overlap with the rectangle.
+    const intersection = turf.intersect(turf.featureCollection([rectanglePolygon, cellPolygon]));
+    if (!intersection) {      
+      continue;
+    }
+
+    // Add the cell to our set and stop recursing if it meets the overlap threshold.
+    const overlapFraction = turf.area(intersection) / turf.area(cellPolygon);
+    if (overlapFraction >= minOverlap) {
+      logger.debug(`Cell ${cell} has ${overlapFraction} overlap, adding to set`);
+      cells.add(cell);
+      continue;
+    }
+
+    // Otherwise, recurse on the cell's children.
+    if (currentResolution >= maxResolution) {
+      logger.debug(`Rectangle not covered by cell at max resolution ${maxResolution}`);
+      continue;
+    }
+    const childCells = new Set<string>();
+    for (const child of cellToChildren(cell, currentResolution + 1)) {
+      for (const neighbor of gridDisk(child, 1)) {
+        childCells.add(neighbor);
+      }
+    }
+    queue.push(...childCells);
   }
-  logger.debug(`Found ${h3CellSet.size} interior cells`, h3CellSet);
-  return h3CellSet;
+  logger.debug(`Found ${cells.size} cells`, cells);
+  return cells;
 }

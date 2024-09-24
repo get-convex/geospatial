@@ -51,6 +51,7 @@
     }
   },
   "dependencies": {
+    "@turf/turf": "^7.1.0",
     "@types/d3-array": "^3.2.1",
     "async-channel": "^0.2.0",
     "convex": "1.16.2",

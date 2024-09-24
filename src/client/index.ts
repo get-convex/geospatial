@@ -56,17 +56,17 @@ export class GeospatialIndex<
     },
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
-    if (process.env.ACTION_RETRIER_LOG_LEVEL) {
+    if (process.env.GEOSPATIAL_LOG_LEVEL) {
       if (
         !["DEBUG", "INFO", "WARN", "ERROR"].includes(
-          process.env.ACTION_RETRIER_LOG_LEVEL,
+          process.env.GEOSPATIAL_LOG_LEVEL,
         )
       ) {
         console.warn(
-          `Invalid log level (${process.env.ACTION_RETRIER_LOG_LEVEL}), defaulting to "INFO"`,
+          `Invalid log level (${process.env.GEOSPATIAL_LOG_LEVEL}), defaulting to "INFO"`,
         );
       }
-      DEFAULT_LOG_LEVEL = process.env.ACTION_RETRIER_LOG_LEVEL as LogLevel;
+      DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
     }
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
     this.maxResolution = options?.maxResolution ?? DEFAULT_MAX_RESOLUTION;
