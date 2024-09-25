@@ -37,13 +37,3 @@ export function rectangleToPolygon(r: Rectangle): Point[] {
     { latitude: r.south, longitude: r.east },
   ];
 }
-
-export function rectangleToGeoJSON(r: Rectangle) {
-  return [
-      [r.west, r.south],
-      [r.west, r.north],
-      [r.east, r.north],
-      [r.east, r.south],
-      [r.west, r.south],
-    ];  
-}

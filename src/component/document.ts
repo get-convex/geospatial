@@ -6,7 +6,11 @@ import {
   query,
 } from "./_generated/server.js";
 import { point, primitive } from "./types.js";
-import { latLngToCells } from "./lib/geometry.js";
+import {
+  latLngToCells,
+  validateLatitude,
+  validateLongitude,
+} from "./lib/geometry.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
 import { increment } from "./counter.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
@@ -26,6 +30,9 @@ export const insert = mutation({
     maxResolution: v.number(),
   },
   handler: async (ctx, args) => {
+    validateLongitude(args.document.coordinates.longitude);
+    validateLatitude(args.document.coordinates.latitude);
+
     await remove(ctx, {
       key: args.document.key,
       maxResolution: args.maxResolution,

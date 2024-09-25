@@ -12,7 +12,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { cellToVertexes, vertexToLatLng } from "h3-js";
-import { Icon, LatLngExpression } from "leaflet";
+import { Icon, LatLngBounds, LatLngExpression } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
@@ -21,6 +21,10 @@ import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
 
 const manhattan = [40.746, -73.985];
+
+function normalizeLongitude(longitude: number) {
+  return ((((longitude + 180) % 360) + 360) % 360) - 180;
+}
 
 function LocationSearch(props: {
   loading: boolean;
@@ -76,7 +80,14 @@ function LocationSearch(props: {
   );
   useMapEvents({
     moveend: () => {
-      setBounds(map.getBounds());
+      const bounds = map.getBounds();
+      const normalizedWest = normalizeLongitude(bounds.getWest());
+      const normalizedEast = normalizeLongitude(bounds.getEast());
+      const normalizedBounds = new LatLngBounds([
+        [bounds.getSouth(), normalizedWest],
+        [bounds.getNorth(), normalizedEast],
+      ]);
+      setBounds(normalizedBounds);
     },
     contextmenu: (e) => {
       e.originalEvent.preventDefault();
@@ -97,12 +108,14 @@ function LocationSearch(props: {
     };
   }, [bounds]);
 
-  const { rows, loading } = useGeoQuery(
-    rectangle,
-    props.mustFilter,
-    props.shouldFilter,
-    96,
-  );
+  // const { rows, loading } = useGeoQuery(
+  //   rectangle,
+  //   props.mustFilter,
+  //   props.shouldFilter,
+  //   96,
+  // );
+  const rows: any[] = [];
+  const loading = false;
 
   if (loading !== props.loading) {
     props.setLoading(loading);
@@ -126,11 +139,19 @@ function LocationSearch(props: {
   for (const cell of stickyH3Cells.current) {
     const polygon = [];
     for (const vertex of cellToVertexes(cell)) {
-      const coords = vertexToLatLng(vertex);
-      polygon.push(coords);
+      const [lat, lng] = vertexToLatLng(vertex);
+      polygon.push([lat, lng]);
     }
     tilingPolygons.push({ polygon: [polygon], cell });
   }
+
+  // TODO: The longitudes need to be normalized here.
+  console.log(
+    "map bounds",
+    map.getBounds().getWest(),
+    "->",
+    map.getBounds().getEast(),
+  );
   return (
     <>
       {tilingPolygons.map(({ polygon, cell }, i) => (

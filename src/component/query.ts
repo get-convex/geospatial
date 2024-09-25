@@ -4,7 +4,7 @@ import { query } from "./_generated/server.js";
 import {
   coverRectangle,
   rectangleContains,
-  validateRectangle,
+  rectanglePolygon,
 } from "./lib/geometry.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -48,7 +48,7 @@ export const debugH3Cells = query({
   },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
-    const logger = createLogger("ERROR");
+    const logger = createLogger("DEBUG");
     const h3Cells = coverRectangle(logger, args.rectangle, args.maxResolution);
     return h3Cells ? [...h3Cells] : [];
   },
@@ -86,7 +86,7 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    validateRectangle(args.query.rectangle);
+    rectanglePolygon(args.query.rectangle);
 
     // Second, convert the rectangle to a set of H3 cells.
     const h3Cells = coverRectangle(
