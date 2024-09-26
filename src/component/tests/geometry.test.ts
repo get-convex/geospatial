@@ -6,8 +6,9 @@ import { modules } from "../test.setup.js";
 import { decodeTupleKey } from "../lib/tupleKey.js";
 import { test as fcTest, fc } from "@fast-check/vitest";
 import { arbitraryDocument, arbitraryResolution } from "./arbitrary.helpers.js";
-import { coverRectangle, h3CellToPolygon } from "../lib/geometry.js";
+import { coverRectangle, cellToPolygon } from "../lib/geometry.js";
 import { createLogger } from "../lib/logging.js";
+import * as h3 from "h3-js";
 
 // Generate an arbitrary viewport rectangle on the sphere.
 // const rectangle = fc
@@ -84,14 +85,53 @@ test("coverRectangle", async () => {
 });
 
 test("h3CellToPolygon", async () => {
-  const easy = "8049fffffffffff";
-  const gmt = "8019fffffffffff";
 
-  // only crosses once?!
-  const north = "8001fffffffffff";
+  for (const cell of h3.getRes0Cells()) {
+    const polygon = cellToPolygon(cell);
+    const polygonArea = polygon.area();
+    const h3Area = h3.cellArea(cell, h3.UNITS.m2);
+    console.log(cell, polygonArea, h3Area, polygon.polygons[0].geometry.coordinates);
+    expect(Math.abs(polygonArea - h3Area) / polygonArea).toBeLessThan(0.01);
+  }
+
+
+  
+  // const gmt = "8019fffffffffff";
+
+  // // only crosses once?!
+  // const north = "8001fffffffffff";  
+  // const easy = "8049fffffffffff";  
+  // const easyExpected = [
+  //   [
+  //     [ -106.55968523174009, 12.150574686647923 ],
+  //     [ -96.05020989622145, 19.26900694125663 ],
+  //     [ -96.66289038040519, 31.619530626908524 ],
+  //     [ -110.25748485653355, 36.80019706117427 ],
+  //     [ -121.3366283326517, 28.653019311484535 ],
+  //     [ -118.48186571718101, 16.572699557873403 ],
+  //     [ -106.55968523174009, 12.150574686647923 ]
+  //   ]
+  // ]
+  // expect(cellToPolygon(easy).geometry.coordinates).toEqual(easyExpected);  
 
   // crosses anti
-  const anti = "809bfffffffffff";
+  // const anti = "809bfffffffffff";    
+  // const expected = [[[[-170.6193233947984,-25.603702576968775],[-161.63482061718392,-16.505947603561054],[-165.41674992858836,-5.7628604914369355],[-176.05696384421353,-3.9687969766095947],[-180,-7.723262175159634],[-180,-22.91062789900188],[-170.6193233947984,-25.603702576968775]]],[[[180,-7.723262175159634],[175.98600155652952,-11.545295975414767],[177.51613498805204,-22.19754138630238],[180,-22.91062789900188],[180,-7.723262175159634]]]];
+  // expect(cellToPolygon(anti).geometry.coordinates).toEqual(expected);
 
-  console.log(JSON.stringify(h3CellToPolygon("812b7ffffffffff")));
+
+  
+
+  const failures = [
+  //   "8003fffffffffff",
+  //  '80edfffffffffff',
+  //   '81033ffffffffff',
+  //   '81f2bffffffffff',    
+
+    "82054ffffffffff",
+  ]
+  for (const cell of failures) {
+    console.log(cell, JSON.stringify(cellToPolygon(cell)));
+  }
+
 });

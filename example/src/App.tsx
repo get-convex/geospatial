@@ -11,14 +11,21 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { cellToVertexes, vertexToLatLng } from "h3-js";
-import { Icon, LatLngBounds, LatLngExpression } from "leaflet";
+import {
+  Icon,
+  LatLng,
+  latLngBounds,
+  LatLngBounds,
+  LatLngExpression,
+  LatLngTuple,
+} from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
 import { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
+import { cellToPolygon } from "../../src/component/lib/geometry.js";
 
 const manhattan = [40.746, -73.985];
 
@@ -76,7 +83,7 @@ function LocationSearch(props: {
         };
         store.setQuery(api.search.execute, args, newValue);
       }
-    },
+    }
   );
   useMapEvents({
     moveend: () => {
@@ -128,41 +135,42 @@ function LocationSearch(props: {
   const stickyH3Cells = useRef<string[]>([]);
   if (h3Cells !== undefined) {
     stickyH3Cells.current = h3Cells;
-  }
+  }  
 
   const stickyRows = useRef<any[]>([]);
   if (rows.length > 0 || loading === false) {
     stickyRows.current = rows;
   }
 
-  const tilingPolygons: { polygon: number[][][]; cell: string }[] = [];
+  const tilingPolygons: { polygon: LatLngExpression[]; cell: string }[] = [];
   for (const cell of stickyH3Cells.current) {
-    const polygon = [];
-    for (const vertex of cellToVertexes(cell)) {
-      const [lat, lng] = vertexToLatLng(vertex);
-      polygon.push([lat, lng]);
-    }
-    tilingPolygons.push({ polygon: [polygon], cell });
+    const { polygons } = cellToPolygon(cell);
+    for (const polygon of polygons) {
+      const leafletPolygon = polygon.geometry.coordinates[0].map((coord) => {
+        const [lng, lat] = coord;
+        return [lat, lng] as LatLngTuple;
+      });
+      tilingPolygons.push({ polygon: leafletPolygon, cell });
+    }    
   }
-
-  // TODO: The longitudes need to be normalized here.
+  
   console.log(
     "map bounds",
-    map.getBounds().getWest(),
-    "->",
-    map.getBounds().getEast(),
+    `long: ${map.getBounds().getWest()} -> ${map.getBounds().getEast()}`,
+    `lat: ${map.getBounds().getSouth()} -> ${map.getBounds().getNorth()}`,
   );
+  
   return (
     <>
       {tilingPolygons.map(({ polygon, cell }, i) => (
         <Polygon
           key={i}
           pathOptions={{ color: "blue", lineCap: "round", lineJoin: "bevel" }}
-          positions={polygon as any}
+          positions={polygon}
           eventHandlers={{
             click: (e) => {
               e.originalEvent.preventDefault();
-              console.log(`Clicked on cell ${cell}`);
+              console.log(`Clicked on cell ${cell}`, polygon);
             },
           }}
         />
@@ -249,7 +257,20 @@ function App() {
           </span>
         )}
       </div>
-      <MapContainer center={manhattan as LatLngExpression} id="mapId" zoom={15}>
+      <MapContainer
+        center={manhattan as LatLngExpression}
+        id="mapId"
+        zoom={15}
+        maxBounds={latLngBounds([
+          [-80, -179.99],
+          [80, 179.99],
+        ])}
+        maxBoundsViscosity={1.0}
+        bounceAtZoomLimits={false}
+        maxZoom={18}
+        minZoom={4}
+        zoomSnap={1}
+      >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

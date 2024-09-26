@@ -28,12 +28,3 @@ export const rectangle = v.object({
   north: latitude,
 });
 export type Rectangle = Infer<typeof rectangle>;
-
-export function rectangleToPolygon(r: Rectangle): Point[] {
-  return [
-    { latitude: r.south, longitude: r.west },
-    { latitude: r.north, longitude: r.west },
-    { latitude: r.north, longitude: r.east },
-    { latitude: r.south, longitude: r.east },
-  ];
-}

@@ -2,9 +2,8 @@ import { Infer, v } from "convex/values";
 import { Point, point, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
 import {
-  coverRectangle,
-  rectangleContains,
-  rectanglePolygon,
+  coverRectangle,  
+  rectangleToPolygon,
 } from "./lib/geometry.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -49,7 +48,8 @@ export const debugH3Cells = query({
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const logger = createLogger("DEBUG");
-    const h3Cells = coverRectangle(logger, args.rectangle, args.maxResolution);
+    const queryPolygon = rectangleToPolygon(args.rectangle);
+    const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
     return h3Cells ? [...h3Cells] : [];
   },
 });
@@ -86,12 +86,12 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    rectanglePolygon(args.query.rectangle);
+    const queryPolygon = rectangleToPolygon(args.query.rectangle);
 
     // Second, convert the rectangle to a set of H3 cells.
     const h3Cells = coverRectangle(
       logger,
-      args.query.rectangle,
+      queryPolygon,
       args.maxResolution,
     );
     if (!h3Cells) {
@@ -195,7 +195,7 @@ export const execute = query({
           if (doc === null) {
             throw new Error("Internal error: document not found");
           }
-          if (!rectangleContains(args.query.rectangle, doc.coordinates)) {
+          if (!queryPolygon.containsPoint(doc.coordinates)) {
             stats.rowsPostFiltered++;
             continue;
           }
