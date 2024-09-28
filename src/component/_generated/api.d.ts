@@ -12,6 +12,7 @@
 
 import type * as counter from "../counter.js";
 import type * as document from "../document.js";
+import type * as lib_antimeridian from "../lib/antimeridian.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_geometry from "../lib/geometry.js";
 import type * as lib_interval from "../lib/interval.js";
@@ -43,6 +44,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   counter: typeof counter;
   document: typeof document;
+  "lib/antimeridian": typeof lib_antimeridian;
   "lib/d64": typeof lib_d64;
   "lib/geometry": typeof lib_geometry;
   "lib/interval": typeof lib_interval;

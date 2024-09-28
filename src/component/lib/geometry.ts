@@ -9,10 +9,11 @@ import {
   latLngToCell,
   UNITS,
 } from "h3-js";
-import { Point, Rectangle } from "../types.js";
+import { Latitude, Longitude, Point, Rectangle } from "../types.js";
 import { Logger } from "./logging.js";
 import * as turf from "@turf/turf";
 import { Feature, GeoJsonProperties, Polygon } from "geojson";
+import { DisjointPolygons, fixPolygon } from "./antimeridian.js";
 
 export function latLngToCells(maxResolution: number, point: Point) {
   const leafCell = latLngToCell(
@@ -50,40 +51,7 @@ export function validateLongitude(longitude: number) {
   }
 }
 
-// `turf` doesn't fully support multi-polygons.
-class DisjointPolygons {
-  polygons: Feature<Polygon, GeoJsonProperties>[];
-  constructor(...polygons: Feature<Polygon, GeoJsonProperties>[]) {
-    this.polygons = polygons;
-  }
 
-  area() {
-    return this.polygons.reduce((acc, polygon) => acc + turf.area(polygon), 0);
-  }
-
-  overlaps(other: DisjointPolygons) {
-    if (this.contains(other) || other.contains(this)) {
-      return true;
-    }
-    for (const polygon of this.polygons) {
-      for (const otherPolygon of other.polygons) {
-        if (turf.booleanContains(polygon, otherPolygon) || turf.booleanContains(otherPolygon, polygon) || turf.booleanIntersects(polygon, otherPolygon)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  contains(other: DisjointPolygons) {
-    return other.polygons.every(polygon => this.polygons.some(p => turf.booleanContains(p, polygon)));
-  }
-
-  containsPoint(point: Point) {
-    const p = turf.point([point.longitude, point.latitude]);
-    return this.polygons.some(polygon => turf.booleanPointInPolygon(p, polygon));
-  }
-}
 
 export function rectangleToPolygon(rectangle: Rectangle) {
   if (rectangle.south > rectangle.north) {
@@ -94,23 +62,25 @@ export function rectangleToPolygon(rectangle: Rectangle) {
   validateLongitude(rectangle.west);
   validateLongitude(rectangle.east);
   if (rectangle.west > rectangle.east) {
-    // Split the rectangle into two rings across the antimeridian.    
+    // Split the rectangle into two rings across the antimeridian. Note that
+    // GeoJSON polygons must obey the right-hand rule, so the exterior rings
+    // most go counter clockwise.    
     return new DisjointPolygons(
       turf.polygon([
         [
           [rectangle.west, rectangle.south],
-          [rectangle.west, rectangle.north],
-          [180, rectangle.north],
           [180, rectangle.south],
+          [180, rectangle.north],
+          [rectangle.west, rectangle.north],
           [rectangle.west, rectangle.south],
         ],
       ]),
       turf.polygon([
         [
           [-180, rectangle.south],
-          [-180, rectangle.north],
-          [rectangle.east, rectangle.north],
           [rectangle.east, rectangle.south],
+          [rectangle.east, rectangle.north],
+          [-180, rectangle.north],
           [-180, rectangle.south],
         ],
       ]),
@@ -120,32 +90,15 @@ export function rectangleToPolygon(rectangle: Rectangle) {
       turf.polygon([
         [
           [rectangle.west, rectangle.south],
-          [rectangle.west, rectangle.north],
-          [rectangle.east, rectangle.north],
           [rectangle.east, rectangle.south],
+          [rectangle.east, rectangle.north],
+          [rectangle.west, rectangle.north],
           [rectangle.west, rectangle.south],
         ],
       ]),
     );
   }
 }
-
-function pointArraysEqual(p: [number, number], q: [number, number]) {
-  return p[0] == q[0] && p[1] == q[1];
-}
-
-const hackyExemptions = new Set([
-  "8003fffffffffff",
-  // "80edfffffffffff",
-  "81033ffffffffff",
-  "81f2bffffffffff",
-
-  // NEW
-  "8001fffffffffff",
-  '80f3fffffffffff',
-  '820327fffffffff',
-  '82f297fffffffff',
-]);
 
 export function cellToPolygon(cell: string): DisjointPolygons {
   const h3Vertices = cellToBoundary(cell, true);
@@ -153,76 +106,14 @@ export function cellToPolygon(cell: string): DisjointPolygons {
   if (!first) {
     throw new Error(`Invalid H3 boundary for ${cell}`);
   }
-  const last = h3Vertices[h3Vertices.length - 1];
-  if (!pointArraysEqual(first, last)) {
-    throw new Error(`H3 vertices for ${cell} do not form a loop.`);
-  }
-
-  const firstLoop = [first];
-  let secondLoop: CoordPair[] | null = null;
-  let currentLoop = firstLoop;
-
-  let numCrosses = 0;
-
-  for (const current of h3Vertices.slice(1)) {
-    const [currentLng, currentLat] = current;
-    const prev = currentLoop.at(-1)!;
-    const [prevLng, prevLat] = prev;
-
-    // HACK: Use a longitude difference of 180 degrees as signal
-    // that the polygon has crossed the antimeridian. This
-    // is safe since we know the maximum edge length for
-    // h3 cells is smaller.
-    const crossesAntimeridian =
-      Math.abs(prevLng - currentLng) >= 180 &&
-      !hackyExemptions.has(cell);
-
-    if (!crossesAntimeridian) {
-      currentLoop.push(current);
-      continue;
-    }
-
-    numCrosses++;
-
-    // If `prevLng > 0`, we're heading east, and we want to wrap
-    // around `currentLng < 0` to compute our intersection point.
-    // If `prevLng < 0`, we're going west and want to subtract 360
-    // degrees such that `endLng < prevLng`.
-    const endLng = currentLng + (prevLng > 0 ? 360 : -360);
-    const dx = endLng - prevLng;
-    const dy = currentLat - prevLat;
-
-    // If we're going east, use +180 as the antimeridian.
-    const antimeridianLng = prevLng > 0 ? 180 : -180;
-    const t = (antimeridianLng - prevLng) / dx;
-    const latitude = prevLat + dy * t;
-
-    if (!secondLoop) {
-      firstLoop.push([antimeridianLng, latitude]);
-      const newLoop: CoordPair[] = [[antimeridianLng * -1, latitude], current];
-      secondLoop = newLoop;
-      currentLoop = secondLoop;
-    } else {
-      secondLoop.push([antimeridianLng, latitude], secondLoop[0]);
-      firstLoop.push([antimeridianLng * -1, latitude], current);
-      currentLoop = firstLoop;
-    }
-  }
-  if (numCrosses % 2 !== 0) {
-    throw new Error(`Invalid number of antimeridian crossings for ${cell}: ${numCrosses}`);
-  }
-  if (secondLoop) {
-    return new DisjointPolygons(turf.polygon([firstLoop]), turf.polygon([secondLoop]));
-  } else {
-    return new DisjointPolygons(turf.polygon([firstLoop]));
-  }
+  return fixPolygon(h3Vertices);  
 }
 
 export function coverRectangle(
   logger: Logger,
-  rectanglePolygon: DisjointPolygons,
+  rectangle: DisjointPolygons,
   maxResolution: number,
-  minOverlap: number = 0.5,
+  minOverlap: number = 0.33,
 ): Set<string> {
   console.time("coverRectangle");
   if (maxResolution < 0 || maxResolution > 15) {
@@ -233,8 +124,7 @@ export function coverRectangle(
   }
 
   const allCells = new Set<string>();
-
-  const rectangleArea = rectanglePolygon.area();
+  
   let resolution = 0;
   let candidates = new Set<string>();
   for (const cell of getRes0Cells()) {
@@ -243,14 +133,14 @@ export function coverRectangle(
   while (true) {
     const { cells, tiledArea } = coverRectangleAtResolution(
       logger,
-      rectanglePolygon,
+      rectangle,
       candidates,
     );
     logger.info(
-      `At resolution ${resolution}, ${cells.size} cells cover ${rectangleArea}/${tiledArea} = ${((rectangleArea / tiledArea) * 100).toFixed(2)}%`,
+      `At resolution ${resolution}, ${cells.size} cells cover ${rectangle.area}/${tiledArea} = ${((rectangle.area / tiledArea) * 100).toFixed(2)}%`,
     );
     if (
-      rectangleArea / tiledArea >= minOverlap ||
+      rectangle.area / tiledArea >= minOverlap ||
       resolution >= maxResolution
     ) {
       for (const cell of cells.values()) {
@@ -274,11 +164,15 @@ function coverRectangleAtResolution(
   const cells = new Set<string>();
   let tiledArea = 0;
   for (const cell of candidates) {
-    const polygon = cellToPolygon(cell);
-    if (polygon.overlaps(rectanglePolygon)) {
-      cells.add(cell);
-      tiledArea += polygon.area();
-    }
+    try {
+      const polygon = cellToPolygon(cell);  
+      if (polygon.overlaps(rectanglePolygon)) {
+        cells.add(cell);
+        tiledArea += polygon.area;
+      }
+    } catch (e) {
+      logger.error(`Error processing cell ${cell}: ${e}`);
+    }    
   }
   return { cells, tiledArea };
 }

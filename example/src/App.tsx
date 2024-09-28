@@ -115,14 +115,12 @@ function LocationSearch(props: {
     };
   }, [bounds]);
 
-  // const { rows, loading } = useGeoQuery(
-  //   rectangle,
-  //   props.mustFilter,
-  //   props.shouldFilter,
-  //   96,
-  // );
-  const rows: any[] = [];
-  const loading = false;
+  const { rows, loading } = useGeoQuery(
+    rectangle,
+    props.mustFilter,
+    props.shouldFilter,
+    96,
+  );  
 
   if (loading !== props.loading) {
     props.setLoading(loading);
@@ -262,8 +260,8 @@ function App() {
         id="mapId"
         zoom={15}
         maxBounds={latLngBounds([
-          [-80, -179.99],
-          [80, 179.99],
+          [-80, -179.9],
+          [80, 179.9],
         ])}
         maxBoundsViscosity={1.0}
         bounceAtZoomLimits={false}
