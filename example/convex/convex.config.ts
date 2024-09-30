@@ -1,7 +1,7 @@
 import { defineApp } from "convex/server";
-import component from "../../src/component/convex.config";
+import geospatial from "@convex-dev/geospatial/convex.config.js";
 
 const app = defineApp();
-app.use(component, { name: "geospatial" });
+app.use(geospatial);
 
 export default app;

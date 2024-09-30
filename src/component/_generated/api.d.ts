@@ -101,14 +101,16 @@ export type Mounts = {
           key: string;
           sortKey: number;
         };
-        maxResolution: number;
+        maxCells: number;
+        maxLevel: number;
+        minLevel: number;
       },
       any
     >;
     remove: FunctionReference<
       "mutation",
       "public",
-      { key: string; maxResolution: number },
+      { key: string; maxCells: number; maxLevel: number; minLevel: number },
       boolean
     >;
   };
@@ -117,7 +119,9 @@ export type Mounts = {
       "query",
       "public",
       {
-        maxResolution: number;
+        maxCells: number;
+        maxLevel: number;
+        minLevel: number;
         rectangle: { east: number; north: number; south: number; west: number };
       },
       Array<{
@@ -131,7 +135,9 @@ export type Mounts = {
       {
         cursor?: string;
         logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-        maxResolution: number;
+        maxCells: number;
+        maxLevel: number;
+        minLevel: number;
         query: {
           filtering: Array<{
             filterKey: string;

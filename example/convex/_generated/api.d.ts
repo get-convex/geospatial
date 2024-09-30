@@ -12,7 +12,7 @@
 
 import type * as addPoint from "../addPoint.js";
 import type * as constants from "../constants.js";
-import type * as index from "../index.js";
+import type * as example from "../example.js";
 import type * as search from "../search.js";
 
 import type {
@@ -31,7 +31,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   addPoint: typeof addPoint;
   constants: typeof constants;
-  index: typeof index;
+  example: typeof example;
   search: typeof search;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
@@ -85,14 +85,16 @@ export declare const components: {
             key: string;
             sortKey: number;
           };
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
         },
         any
       >;
       remove: FunctionReference<
         "mutation",
         "internal",
-        { key: string; maxResolution: number },
+        { key: string; maxCells: number; maxLevel: number; minLevel: number },
         boolean
       >;
     };
@@ -101,7 +103,9 @@ export declare const components: {
         "query",
         "internal",
         {
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
           rectangle: {
             east: number;
             north: number;
@@ -120,7 +124,9 @@ export declare const components: {
         {
           cursor?: string;
           logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
           query: {
             filtering: Array<{
               filterKey: string;

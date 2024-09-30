@@ -1,9 +1,8 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { Point, point } from "../../src/client";
-import { geospatial } from ".";
+import { Point, point, rectangle } from "@convex-dev/geospatial";
+import { geospatial } from "./example";
 import { Id } from "./_generated/dataModel";
-import { rectangle } from "../../src/component/types";
 
 export const execute = query({
   args: {
@@ -25,23 +24,25 @@ export const execute = query({
     nextCursor: v.optional(v.string()),
   }),
   async handler(ctx, args) {
-    const mustFilterConditions = args.mustFilter.map((emoji) => ({
-      filterKey: "name" as const,
-      filterValue: emoji,
-      occur: "must" as const,
-    }));
-    const shouldFilterConditions = args.shouldFilter.map((emoji) => ({
-      filterKey: "name" as const,
-      filterValue: emoji,
-      occur: "should" as const,
-    }));
-    const { results, nextCursor } = await geospatial.queryRectangle(
+    const { results, nextCursor } = await geospatial.query(
       ctx,
-      args.rectangle,
-      [...mustFilterConditions, ...shouldFilterConditions],
-      {},
+      {
+        shape: {
+          type: "rectangle",
+          rectangle: args.rectangle,
+        },
+        filter: (q) => {
+          for (const condition of args.mustFilter) {
+            q = q.eq("name", condition);
+          }
+          if (!args.shouldFilter.length) {
+            return q;
+          }
+          return q.in("name", args.shouldFilter);
+        },
+        limit: args.maxRows,
+      },
       args.cursor,
-      args.maxRows,
     );
     const coordinatesByKey = new Map<string, Point>();
     const rowFetches = [];

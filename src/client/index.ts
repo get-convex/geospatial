@@ -1,5 +1,3 @@
-// This file is for thick component clients and helpers that run
-
 import {
   Expand,
   FunctionReference,
@@ -9,11 +7,12 @@ import {
 import { GenericId } from "convex/values";
 import type { api } from "../component/_generated/api.js";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
-import { point } from "../component/types.js";
+import { point, rectangle } from "../component/types.js";
 import { LogLevel } from "../component/lib/logging.js";
+import { FilterBuilderImpl, GeospatialQuery } from "./query.js";
 
-export type { Point };
-export { point };
+export type { Point, Primitive, GeospatialQuery, Rectangle };
+export { point, rectangle };
 
 declare global {
   const Convex: Record<string, unknown>;
@@ -24,7 +23,9 @@ if (typeof Convex === "undefined") {
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 20;
+export const DEFAULT_MIN_LEVEL = 4;
+export const DEFAULT_MAX_LEVEL = 16;
+export const DEFAULT_MAX_CELLS = 8;
 
 export type GeospatialDocument = {
   key: string;
@@ -33,27 +34,44 @@ export type GeospatialDocument = {
   sortKey: number;
 };
 
+export interface GeospatialIndexOptions {
+  /**
+   * The minimum S2 cell level to use when querying. Defaults to 4.
+   */
+  minLevel?: number;
+  /**
+   * The maximum S2 cell level to use when querying. Defaults to 16.
+   */
+  maxLevel?: number;
+  /**
+   * The maximum number of cells to use when querying. Defaults to 8.
+   */
+  maxCells?: number;
+  /**
+   * The log level to use when logging. Defaults to the `GEOSPATIAL_LOG_LEVEL` environment variable, or "INFO" if not set.
+   */
+  logLevel?: LogLevel;
+}
+
 export class GeospatialIndex<
   Doc extends GeospatialDocument = GeospatialDocument,
 > {
   logLevel: LogLevel;
-  maxResolution: number;
+
+  minLevel: number;
+  maxLevel: number;
+  maxCells: number;
 
   /**
    * Create a new geospatial index, powered by S2 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
    *
    * @param component - The registered geospatial index from `components`.
-   * @param maxResolution - The maximum resolution to use when querying. See https://s2geometry.io/resources/s2cell_statistics
-   * for the feature size at each resolution. Higher resolution indexes will be able to distinguish between closer
-   * points at the cost of storage, insertion time, and query time. This defaults to 20, which has ~10m resolution.
+   * @param options - The options to configure the index.
    */
   constructor(
     private component: UseApi<typeof api>,
-    options?: {
-      maxResolution?: number;
-      logLevel?: LogLevel;
-    },
+    options?: GeospatialIndexOptions,
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
     if (process.env.GEOSPATIAL_LOG_LEVEL) {
@@ -69,7 +87,9 @@ export class GeospatialIndex<
       DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
     }
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
-    this.maxResolution = options?.maxResolution ?? DEFAULT_MAX_RESOLUTION;
+    this.minLevel = options?.minLevel ?? DEFAULT_MIN_LEVEL;
+    this.maxLevel = options?.maxLevel ?? DEFAULT_MAX_LEVEL;
+    this.maxCells = options?.maxCells ?? DEFAULT_MAX_CELLS;
   }
 
   /**
@@ -95,7 +115,9 @@ export class GeospatialIndex<
         filterKeys,
         sortKey: sortKey ?? Math.random(),
       },
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
   }
 
@@ -121,46 +143,43 @@ export class GeospatialIndex<
   async remove(ctx: MutationCtx, key: Doc["key"]): Promise<boolean> {
     return await ctx.runMutation(this.component.document.remove, {
       key,
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
   }
 
   /**
-   * Query for keys within a given rectangle.
-   *
-   * This method is intended for user-facing queries, like finding all points of interest on the
-   * user's viewport. It automatically determines the query resolution based on the rectangle's
-   * dimensions and samples at most `maxRows` results.
+   * Query for keys within a given shape.
    *
    * @param ctx - The Convex query context.
-   * @param rectangle - The geographic area to query.
-   * @param filterConditions - The filter conditions to apply to the query.
-   * @param sortingInterval - The sorting interval to apply to the query.
+   * @param query - The query to execute.
    * @param cursor - The continuation cursor to use for paginating through results.
-   * @param maxRows - The maximum number of rows to return.
    * @returns - An array of objects with the key-coordinate pairs and optionally a continuation cursor.
    */
-
-  async queryRectangle(
+  async query(
     ctx: QueryCtx,
-    rectangle: Rectangle,
-    filterConditions: FilterObject<Doc>[] = [],
-    sortingInterval: { startInclusive?: number; endExclusive?: number } = {},
+    query: GeospatialQuery<Doc>,
     cursor: string | undefined = undefined,
-    maxRows: number = 64,
   ): Promise<{
     results: { key: Doc["key"]; coordinates: Point }[];
     nextCursor?: string;
   }> {
+    const filterBuilder = new FilterBuilderImpl<Doc>();
+    if (query.filter) {
+      query.filter(filterBuilder);
+    }
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
-        rectangle,
-        filtering: filterConditions as any,
-        sorting: { interval: sortingInterval },
-        maxResults: maxRows,
+        rectangle: query.shape.rectangle,
+        filtering: filterBuilder.filterConditions as any,
+        sorting: { interval: filterBuilder.interval ?? {} },
+        maxResults: query.limit ?? 64,
       },
       cursor,
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
       logLevel: this.logLevel,
     });
     return resp;
@@ -181,11 +200,18 @@ export class GeospatialIndex<
   ): Promise<{ token: string; vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
-      maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
     return resp as any;
   }
 }
+
+export type FilterValue<
+  Doc extends GeospatialDocument,
+  FieldName extends keyof Doc["filterKeys"],
+> = ExtractArray<Doc["filterKeys"][FieldName]>;
 
 type UseApi<API> = Expand<{
   [mod in keyof API]: API[mod] extends FunctionReference<
@@ -230,7 +256,7 @@ type MutationCtx = {
   ) => Promise<FunctionReturnType<Mutation>>;
 } & QueryCtx;
 
-type FilterObject<Doc extends GeospatialDocument> = {
+export type FilterObject<Doc extends GeospatialDocument> = {
   [K in keyof Doc["filterKeys"]]: {
     filterKey: K;
     filterValue: ExtractArray<Doc["filterKeys"][K]>;

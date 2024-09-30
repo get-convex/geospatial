@@ -1,4 +1,4 @@
-import { GeospatialIndex, Point } from "../../src/client";
+import { GeospatialIndex, Point } from "@convex-dev/geospatial";
 import { Id } from "./_generated/dataModel";
 import { components } from "./_generated/api";
 

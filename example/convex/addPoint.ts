@@ -1,12 +1,7 @@
 import { v } from "convex/values";
-import { geospatial } from ".";
-import { point } from "../../src/client";
-import {
-  action,
-  internalAction,
-  internalMutation,
-  mutation,
-} from "./_generated/server";
+import { geospatial } from "./example.js";
+import { point } from "@convex-dev/geospatial";
+import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
 

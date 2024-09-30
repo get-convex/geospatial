@@ -12,16 +12,15 @@ for (let i = 0; i < wasmBinary.length; i++) {
 
 export type CellID = BigInt;
 
+// See https://docs.s2cell.aliddell.com/en/stable/useful_s2_links.html for useful articles
+// for working with S2.
 export class S2Bindings {
   private decoder = new TextDecoder();
-  private wasmMemory: Uint8Array;
 
   constructor(
     private exports: any,
     private go: Go,
-  ) {
-    this.wasmMemory = new Uint8Array(exports.memory.buffer);
-  }
+  ) {}
 
   static async load(): Promise<S2Bindings> {
     const go = new Go();
@@ -43,7 +42,8 @@ export class S2Bindings {
       throw new Error(`Failed to get cell ID token`);
     }
     const ptr = this.exports.tokenBufferPtr();
-    const buffer = this.wasmMemory.slice(ptr + 0, ptr + len);
+    const wasmMemory = new Uint8Array(this.exports.memory.buffer);
+    const buffer = wasmMemory.slice(ptr + 0, ptr + len);
     return this.decoder.decode(buffer.buffer);
   }
 
@@ -51,19 +51,27 @@ export class S2Bindings {
     return this.exports.cellIDParent(cellID, level);
   }
 
-  coverRectangle(rectangle: Rectangle, maxResolution: number): CellID[] {
+  coverRectangle(
+    rectangle: Rectangle,
+    minLevel: number,
+    maxLevel: number,
+    maxCells: number,
+  ): CellID[] {
     const len = this.exports.coverRectangle(
       rectangle.south,
       rectangle.west,
       rectangle.north,
       rectangle.east,
-      maxResolution,
+      minLevel,
+      maxLevel,
+      maxCells,
     );
     if (len < 0) {
       throw new Error(`Failed to coverRectangle`);
     }
     const ptr = this.exports.coverRectangleBufferPtr();
-    const buffer = this.wasmMemory.slice(ptr + 0, ptr + len * 8);
+    const wasmMemory = new Uint8Array(this.exports.memory.buffer);
+    const buffer = wasmMemory.slice(ptr + 0, ptr + len * 8);
     const uint64s = new BigUint64Array(buffer.buffer);
     return [...uint64s];
   }

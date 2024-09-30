@@ -37,7 +37,7 @@ func cellIDToken(cellID uint64) int {
 	return len(token)
 }
 
-const COVER_RECTANGLE_BUFFER_SIZE int = 64
+const COVER_RECTANGLE_BUFFER_SIZE int = 1536
 
 var coverRectangleBuffer [COVER_RECTANGLE_BUFFER_SIZE]uint64
 
@@ -47,12 +47,13 @@ func coverRectangleBufferPtr() *[COVER_RECTANGLE_BUFFER_SIZE]uint64 {
 }
 
 //export coverRectangle
-func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, maxResolution int) int {
+func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, minLevel int, maxLevel int, maxCells int) int {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(latDeg2, lngDeg2))
 	rc := s2.RegionCoverer{
-		MaxLevel: maxResolution,
-		MaxCells: 16,
+		MinLevel: minLevel,
+		MaxLevel: maxLevel,
+		MaxCells: maxCells,
 	}
 	covering := rc.Covering(s2.Region(rect))
 	if len(covering) > COVER_RECTANGLE_BUFFER_SIZE {
