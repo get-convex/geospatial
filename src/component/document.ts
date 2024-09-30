@@ -23,11 +23,15 @@ const geoDocument = v.object({
 function s2Cells(
   s2: S2Bindings,
   point: Point,
-  maxResolution: number,
+  opts: {
+    minLevel: number;
+    maxLevel: number;
+    maxCells: number;
+  },
 ): string[] {
   const leafCellID = s2.cellIDFromPoint(point);
   const cells = [];
-  for (let i = 0; i <= maxResolution; i++) {
+  for (let i = opts.minLevel; i <= opts.maxLevel; i++) {
     const parentCellID = s2.cellIDParent(leafCellID, i);
     cells.push(s2.cellIDToken(parentCellID));
   }
@@ -37,18 +41,23 @@ function s2Cells(
 export const insert = mutation({
   args: {
     document: geoDocument,
-    maxResolution: v.number(),
+
+    minLevel: v.number(),
+    maxLevel: v.number(),
+    maxCells: v.number(),
   },
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
 
     await remove(ctx, {
       key: args.document.key,
-      maxResolution: args.maxResolution,
+      minLevel: args.minLevel,
+      maxLevel: args.maxLevel,
+      maxCells: args.maxCells,
     });
     const pointId = await ctx.db.insert("points", args.document as any);
 
-    const cells = s2Cells(s2, args.document.coordinates, args.maxResolution);
+    const cells = s2Cells(s2, args.document.coordinates, args);
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
     for (const cell of cells) {
       await ctx.db.insert("pointsByCell", { cell, tupleKey });
@@ -91,7 +100,9 @@ export const get = query({
 export const remove = mutation({
   args: {
     key: v.string(),
-    maxResolution: v.number(),
+    minLevel: v.number(),
+    maxLevel: v.number(),
+    maxCells: v.number(),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
@@ -105,7 +116,7 @@ export const remove = mutation({
       return false;
     }
 
-    const cells = s2Cells(s2, existing.coordinates, args.maxResolution);
+    const cells = s2Cells(s2, existing.coordinates, args);
     const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
     for (const cell of cells) {
       const existingCell = await ctx.db
@@ -143,97 +154,5 @@ export const remove = mutation({
     }
     await ctx.db.delete(existing._id);
     return true;
-  },
-});
-
-const cursor = v.object({
-  table: v.union(v.literal("cell"), v.literal("filter")),
-  lowerBound: v.optional(v.string()),
-});
-
-export const backfillCounts = internalAction({
-  args: {
-    cursor: v.union(v.null(), cursor),
-    maxRows: v.number(),
-    maxPages: v.number(),
-  },
-  handler: async (ctx, args) => {
-    let currentCursor: Infer<typeof cursor> | null = args.cursor ?? {
-      table: "cell",
-    };
-    let i = 0;
-    while (currentCursor) {
-      currentCursor = await ctx.runMutation(internal.document.backfillPage, {
-        cursor: currentCursor,
-        maxRows: args.maxRows,
-      });
-      i += 1;
-      if (i >= args.maxPages) {
-        await ctx.scheduler.runAfter(0, internal.document.backfillCounts, {
-          cursor: currentCursor,
-          maxRows: args.maxRows,
-          maxPages: args.maxPages,
-        });
-        return;
-      }
-      console.log(`Page ${i} @ ${JSON.stringify(currentCursor)}`);
-    }
-  },
-});
-
-export const backfillPage = internalMutation({
-  args: {
-    cursor,
-    maxRows: v.number(),
-  },
-  returns: v.union(v.null(), cursor),
-  handler: async (ctx, args) => {
-    if (args.cursor.table === "cell") {
-      const points = await ctx.db
-        .query("pointsByCell")
-        .withIndex("by_id", (q) =>
-          args.cursor.lowerBound
-            ? q.gt("_id", args.cursor.lowerBound as any)
-            : q,
-        )
-        .take(args.maxRows);
-      if (points.length === 0) {
-        return {
-          table: "filter" as const,
-        };
-      }
-      for (const cellKey of points) {
-        await increment(ctx, cellCounterKey(cellKey.cell), 1);
-      }
-      return {
-        table: "cell" as const,
-        lowerBound: points[points.length - 1]._id,
-      };
-    } else if (args.cursor.table === "filter") {
-      const points = await ctx.db
-        .query("pointsByFilterKey")
-        .withIndex("by_id", (q) =>
-          args.cursor.lowerBound
-            ? q.gt("_id", args.cursor.lowerBound as any)
-            : q,
-        )
-        .take(args.maxRows);
-      if (points.length === 0) {
-        return null;
-      }
-      for (const filterKey of points) {
-        await increment(
-          ctx,
-          filterCounterKey(filterKey.filterKey, filterKey.filterValue),
-          1,
-        );
-      }
-      return {
-        table: "filter" as const,
-        lowerBound: points[points.length - 1]._id,
-      };
-    } else {
-      throw new Error("Invariant failed: Unknown table " + args.cursor.table);
-    }
   },
 });

@@ -40,7 +40,9 @@ const queryResult = v.object({
 export const debugCells = query({
   args: {
     rectangle,
-    maxResolution: v.number(),
+    minLevel: v.number(),
+    maxLevel: v.number(),
+    maxCells: v.number(),
   },
   returns: v.array(
     v.object({
@@ -50,7 +52,12 @@ export const debugCells = query({
   ),
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
-    const cells = s2.coverRectangle(args.rectangle, args.maxResolution);
+    const cells = s2.coverRectangle(
+      args.rectangle,
+      args.minLevel,
+      args.maxLevel,
+      args.maxCells,
+    );
     const result = cells.map((cell) => {
       const token = s2.cellIDToken(cell);
       const vertices = s2.cellVertexes(cell);
@@ -70,7 +77,9 @@ export const execute = query({
   args: {
     query: geospatialQuery,
     cursor: v.optional(v.string()),
-    maxResolution: v.number(),
+    minLevel: v.number(),
+    maxLevel: v.number(),
+    maxCells: v.number(),
     logLevel,
   },
   returns: executeResult,
@@ -96,9 +105,9 @@ export const execute = query({
     }
     const { rectangle } = args.query;
     const cells = s2
-      .coverRectangle(rectangle, args.maxResolution)
+      .coverRectangle(rectangle, args.minLevel, args.maxLevel, args.maxCells)
       .map((cellID) => s2.cellIDToken(cellID));
-    logger.debug("S2 cells", args.query, args.maxResolution, cells);
+    logger.debug("S2 cells", args, cells);
 
     const stats: Stats = {
       cells: cells.length,

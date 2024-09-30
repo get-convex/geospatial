@@ -85,14 +85,16 @@ export declare const components: {
             key: string;
             sortKey: number;
           };
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
         },
         any
       >;
       remove: FunctionReference<
         "mutation",
         "internal",
-        { key: string; maxResolution: number },
+        { key: string; maxCells: number; maxLevel: number; minLevel: number },
         boolean
       >;
     };
@@ -101,7 +103,9 @@ export declare const components: {
         "query",
         "internal",
         {
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
           rectangle: {
             east: number;
             north: number;
@@ -120,7 +124,9 @@ export declare const components: {
         {
           cursor?: string;
           logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-          maxResolution: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
           query: {
             filtering: Array<{
               filterKey: string;

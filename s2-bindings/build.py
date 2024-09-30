@@ -9,7 +9,7 @@ assert subprocess.check_output(["tinygo", "version"]).strip().split()[2] == b"0.
 
 args = ["tinygo", "build", "-o", "../dist/s2-bindings.wasm"]
 if not DEBUG:
-    args.extend(["-no-debug", "-panic", "trap", "-gc", "leaking", "-opt", "2"])
+    args.extend(["-no-debug", "-panic", "trap", "-opt", "2"])
 
 subprocess.check_call(
     args,

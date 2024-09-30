@@ -23,7 +23,9 @@ if (typeof Convex === "undefined") {
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 20;
+export const DEFAULT_MIN_LEVEL = 4;
+export const DEFAULT_MAX_LEVEL = 16;
+export const DEFAULT_MAX_CELLS = 8;
 
 export type GeospatialDocument = {
   key: string;
@@ -32,27 +34,44 @@ export type GeospatialDocument = {
   sortKey: number;
 };
 
+export interface GeospatialIndexOptions {
+  /**
+   * The minimum S2 cell level to use when querying. Defaults to 4.
+   */
+  minLevel?: number;
+  /**
+   * The maximum S2 cell level to use when querying. Defaults to 16.
+   */
+  maxLevel?: number;
+  /**
+   * The maximum number of cells to use when querying. Defaults to 8.
+   */
+  maxCells?: number;
+  /**
+   * The log level to use when logging. Defaults to the `GEOSPATIAL_LOG_LEVEL` environment variable, or "INFO" if not set.
+   */
+  logLevel?: LogLevel;
+}
+
 export class GeospatialIndex<
   Doc extends GeospatialDocument = GeospatialDocument,
 > {
   logLevel: LogLevel;
-  maxResolution: number;
+
+  minLevel: number;
+  maxLevel: number;
+  maxCells: number;
 
   /**
    * Create a new geospatial index, powered by S2 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
    *
    * @param component - The registered geospatial index from `components`.
-   * @param maxResolution - The maximum resolution to use when querying. See https://s2geometry.io/resources/s2cell_statistics
-   * for the feature size at each resolution. Higher resolution indexes will be able to distinguish between closer
-   * points at the cost of storage, insertion time, and query time. This defaults to 20, which has ~10m resolution.
+   * @param options - The options to configure the index.
    */
   constructor(
     private component: UseApi<typeof api>,
-    options?: {
-      maxResolution?: number;
-      logLevel?: LogLevel;
-    },
+    options?: GeospatialIndexOptions,
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
     if (process.env.GEOSPATIAL_LOG_LEVEL) {
@@ -68,7 +87,9 @@ export class GeospatialIndex<
       DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
     }
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
-    this.maxResolution = options?.maxResolution ?? DEFAULT_MAX_RESOLUTION;
+    this.minLevel = options?.minLevel ?? DEFAULT_MIN_LEVEL;
+    this.maxLevel = options?.maxLevel ?? DEFAULT_MAX_LEVEL;
+    this.maxCells = options?.maxCells ?? DEFAULT_MAX_CELLS;
   }
 
   /**
@@ -94,7 +115,9 @@ export class GeospatialIndex<
         filterKeys,
         sortKey: sortKey ?? Math.random(),
       },
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
   }
 
@@ -120,7 +143,9 @@ export class GeospatialIndex<
   async remove(ctx: MutationCtx, key: Doc["key"]): Promise<boolean> {
     return await ctx.runMutation(this.component.document.remove, {
       key,
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
   }
 
@@ -152,7 +177,9 @@ export class GeospatialIndex<
         maxResults: query.limit ?? 64,
       },
       cursor,
-      maxResolution: this.maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
       logLevel: this.logLevel,
     });
     return resp;
@@ -173,7 +200,9 @@ export class GeospatialIndex<
   ): Promise<{ token: string; vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
-      maxResolution,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      maxCells: this.maxCells,
     });
     return resp as any;
   }
