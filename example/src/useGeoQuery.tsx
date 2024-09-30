@@ -83,6 +83,7 @@ export function useGeoQuery(
     }
   }, [queries, argsKey, queryResults]);
   const rows = [];
+  const seen = new Set<string>();
   let loading = false;
   let foundAny = false;
   for (const [key, result] of Object.entries(queryResults)) {
@@ -92,7 +93,15 @@ export function useGeoQuery(
         throw result;
       }
       if (result) {
-        rows.push(...result.rows);
+        for (const row of result.rows) {
+          // Since we don't have proper reactive pagination yet with stable
+          // boundaries, just deduplicate results if pages overlap.
+          if (seen.has(row._id)) {
+            continue;
+          }
+          rows.push(row);
+          seen.add(row._id);
+        }
       } else {
         loading = true;
       }
