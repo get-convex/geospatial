@@ -12,6 +12,8 @@ for (let i = 0; i < wasmBinary.length; i++) {
 
 export type CellID = BigInt;
 
+// See https://docs.s2cell.aliddell.com/en/stable/useful_s2_links.html for useful articles
+// for working with S2.
 export class S2Bindings {
   private decoder = new TextDecoder();
   private wasmMemory: Uint8Array;
