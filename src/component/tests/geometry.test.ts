@@ -6,7 +6,11 @@ import { modules } from "../test.setup.js";
 import { decodeTupleKey } from "../lib/tupleKey.js";
 import { test as fcTest, fc } from "@fast-check/vitest";
 import { arbitraryDocument, arbitraryResolution } from "./arbitrary.helpers.js";
-import { coverRectangle, cellToPolygon, rectangleToPolygon } from "../lib/geometry.js";
+import {
+  coverRectangle,
+  cellToPolygon,
+  rectangleToPolygon,
+} from "../lib/geometry.js";
 import { createLogger } from "../lib/logging.js";
 import * as h3 from "h3-js";
 
@@ -30,14 +34,11 @@ const point = fc.record({
   longitude: fc.float({ min: -179, max: 179, noNaN: true }),
 });
 
-fcTest.prop({ rectangle })(
-  "coverRectangle",
-  async ({ rectangle }) => {
-    const logger = createLogger("INFO");
-    const polygon = rectangleToPolygon(rectangle);
-    const rectangles = coverRectangle(logger, polygon, 1);
-  }
-)
+fcTest.prop({ rectangle })("coverRectangle", async ({ rectangle }) => {
+  const logger = createLogger("INFO");
+  const polygon = rectangleToPolygon(rectangle);
+  const rectangles = coverRectangle(logger, polygon, 1);
+});
 
 // fcTest.prop({ rectangle, point })(
 //   "rectangleContains",
@@ -93,8 +94,8 @@ test("coverRectangle", async () => {
   //   } 10 0.5
 });
 
-test('h3CellToPolygon', async () => {
-  const cell = '8001fffffffffff';
+test("h3CellToPolygon", async () => {
+  const cell = "8001fffffffffff";
   const polygon = cellToPolygon(cell);
   console.log(polygon.area);
   expect(polygon.area).toBeGreaterThan(0);
@@ -102,17 +103,17 @@ test('h3CellToPolygon', async () => {
 
 test("h3CellToPolygonArea", async () => {
   const polarExemptions = new Set([
-    '8001fffffffffff',
-    '8003fffffffffff',
-    '8005fffffffffff',
-    '80f3fffffffffff',
-    '81033ffffffffff',
-    '81f2bffffffffff',
-    '820327fffffffff',
-    '82f297fffffffff',
-    '830326fffffffff',
-    '83f293fffffffff',
-  ])
+    "8001fffffffffff",
+    "8003fffffffffff",
+    "8005fffffffffff",
+    "80f3fffffffffff",
+    "81033ffffffffff",
+    "81f2bffffffffff",
+    "820327fffffffff",
+    "82f297fffffffff",
+    "830326fffffffff",
+    "83f293fffffffff",
+  ]);
 
   let current = new Set<string>();
   for (const cell of h3.getRes0Cells()) {
@@ -122,11 +123,13 @@ test("h3CellToPolygonArea", async () => {
 
   for (let resolution = 0; resolution < 3; resolution++) {
     for (const cell of current.values()) {
-      const polygon = cellToPolygon(cell);        
-      const h3Area = h3.cellArea(cell, h3.UNITS.m2);      
-      if (!polarExemptions.has(cell)) {                
-        expect(Math.abs(polygon.area  - h3Area) / polygon.area).toBeLessThan(0.10);
-      }    
+      const polygon = cellToPolygon(cell);
+      const h3Area = h3.cellArea(cell, h3.UNITS.m2);
+      if (!polarExemptions.has(cell)) {
+        expect(Math.abs(polygon.area - h3Area) / polygon.area).toBeLessThan(
+          0.1,
+        );
+      }
     }
     for (const cell of current.values()) {
       for (const child of h3.cellToChildren(cell, resolution + 1)) {

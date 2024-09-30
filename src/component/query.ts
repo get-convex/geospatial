@@ -1,10 +1,7 @@
 import { Infer, v } from "convex/values";
 import { Point, point, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
-import {
-  coverRectangle,  
-  rectangleToPolygon,
-} from "./lib/geometry.js";
+import { coverRectangle, rectangleToPolygon } from "./lib/geometry.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
 import { Union } from "./streams/union.js";
@@ -89,11 +86,7 @@ export const execute = query({
     const queryPolygon = rectangleToPolygon(args.query.rectangle);
 
     // Second, convert the rectangle to a set of H3 cells.
-    const h3Cells = coverRectangle(
-      logger,
-      queryPolygon,
-      args.maxResolution,
-    );
+    const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
     if (!h3Cells) {
       logger.warn(
         `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,

@@ -1,22 +1,10 @@
-import {
-  cellToBoundary,
-  cellToChildren,
-  cellToParent,
-  CoordPair,
-  getRes0Cells,
-  greatCircleDistance,
-  gridDisk,
-  latLngToCell,
-  UNITS,
-} from "h3-js";
-import { Latitude, Longitude, Point, Rectangle } from "../types.js";
+import * as h3 from "h3-js";
+import { Point, Rectangle } from "../types.js";
 import { Logger } from "./logging.js";
-import * as turf from "@turf/turf";
-import { Feature, GeoJsonProperties, Polygon } from "geojson";
-import { DisjointPolygons, fixPolygon } from "./antimeridian.js";
+import { GeoJSONPolygon } from "./antimeridian.js";
 
 export function latLngToCells(maxResolution: number, point: Point) {
-  const leafCell = latLngToCell(
+  const leafCell = h3.latLngToCell(
     point.latitude,
     point.longitude,
     maxResolution + 1,
@@ -26,7 +14,7 @@ export function latLngToCells(maxResolution: number, point: Point) {
   }
   const cells = [leafCell];
   for (let resolution = maxResolution; resolution >= 0; resolution--) {
-    const parentCell = cellToParent(leafCell, resolution);
+    const parentCell = h3.cellToParent(leafCell, resolution);
     if (parentCell === null) {
       throw new Error("Invalid resolution");
     }
@@ -51,8 +39,6 @@ export function validateLongitude(longitude: number) {
   }
 }
 
-
-
 export function rectangleToPolygon(rectangle: Rectangle) {
   if (rectangle.south > rectangle.north) {
     throw new Error("Bottom edge of rectangle must be below top edge");
@@ -61,57 +47,23 @@ export function rectangleToPolygon(rectangle: Rectangle) {
   validateLatitude(rectangle.north);
   validateLongitude(rectangle.west);
   validateLongitude(rectangle.east);
-  if (rectangle.west > rectangle.east) {
-    // Split the rectangle into two rings across the antimeridian. Note that
-    // GeoJSON polygons must obey the right-hand rule, so the exterior rings
-    // most go counter clockwise.    
-    return new DisjointPolygons(
-      turf.polygon([
-        [
-          [rectangle.west, rectangle.south],
-          [180, rectangle.south],
-          [180, rectangle.north],
-          [rectangle.west, rectangle.north],
-          [rectangle.west, rectangle.south],
-        ],
-      ]),
-      turf.polygon([
-        [
-          [-180, rectangle.south],
-          [rectangle.east, rectangle.south],
-          [rectangle.east, rectangle.north],
-          [-180, rectangle.north],
-          [-180, rectangle.south],
-        ],
-      ]),
-    );
-  } else {
-    return new DisjointPolygons(
-      turf.polygon([
-        [
-          [rectangle.west, rectangle.south],
-          [rectangle.east, rectangle.south],
-          [rectangle.east, rectangle.north],
-          [rectangle.west, rectangle.north],
-          [rectangle.west, rectangle.south],
-        ],
-      ]),
-    );
-  }
+  return new GeoJSONPolygon([
+    [rectangle.west, rectangle.south],
+    [rectangle.east, rectangle.south],
+    [rectangle.east, rectangle.north],
+    [rectangle.west, rectangle.north],
+    [rectangle.west, rectangle.south],
+  ]);
 }
 
-export function cellToPolygon(cell: string): DisjointPolygons {
-  const h3Vertices = cellToBoundary(cell, true);
-  const first = h3Vertices[0];
-  if (!first) {
-    throw new Error(`Invalid H3 boundary for ${cell}`);
-  }
-  return fixPolygon(h3Vertices);  
+export function cellToPolygon(cell: string): GeoJSONPolygon {
+  const h3Vertices = h3.cellToBoundary(cell, true);
+  return new GeoJSONPolygon(h3Vertices);
 }
 
 export function coverRectangle(
   logger: Logger,
-  rectangle: DisjointPolygons,
+  rectangle: GeoJSONPolygon,
   maxResolution: number,
   minOverlap: number = 0.33,
 ): Set<string> {
@@ -124,10 +76,10 @@ export function coverRectangle(
   }
 
   const allCells = new Set<string>();
-  
+
   let resolution = 0;
   let candidates = new Set<string>();
-  for (const cell of getRes0Cells()) {
+  for (const cell of h3.getRes0Cells()) {
     candidates.add(cell);
   }
   while (true) {
@@ -158,21 +110,21 @@ export function coverRectangle(
 
 function coverRectangleAtResolution(
   logger: Logger,
-  rectanglePolygon: DisjointPolygons,
+  rectanglePolygon: GeoJSONPolygon,
   candidates: Set<string>,
 ): { cells: Set<string>; tiledArea: number } {
   const cells = new Set<string>();
   let tiledArea = 0;
   for (const cell of candidates) {
     try {
-      const polygon = cellToPolygon(cell);  
+      const polygon = cellToPolygon(cell);
       if (polygon.overlaps(rectanglePolygon)) {
         cells.add(cell);
         tiledArea += polygon.area;
       }
     } catch (e) {
       logger.error(`Error processing cell ${cell}: ${e}`);
-    }    
+    }
   }
   return { cells, tiledArea };
 }
@@ -184,9 +136,9 @@ function expandCandidates(
 ): Set<string> {
   const expanded = new Set<string>();
   for (const cell of candidates.values()) {
-    for (const child of cellToChildren(cell, resolution + 1)) {
+    for (const child of h3.cellToChildren(cell, resolution + 1)) {
       expanded.add(child);
-      for (const neighbor of gridDisk(child, 1)) {
+      for (const neighbor of h3.gridDisk(child, 1)) {
         expanded.add(neighbor);
       }
     }

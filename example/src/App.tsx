@@ -13,7 +13,6 @@ import {
 } from "react-leaflet";
 import {
   Icon,
-  LatLng,
   latLngBounds,
   LatLngBounds,
   LatLngExpression,
@@ -83,7 +82,7 @@ function LocationSearch(props: {
         };
         store.setQuery(api.search.execute, args, newValue);
       }
-    }
+    },
   );
   useMapEvents({
     moveend: () => {
@@ -120,7 +119,7 @@ function LocationSearch(props: {
     props.mustFilter,
     props.shouldFilter,
     96,
-  );  
+  );
 
   if (loading !== props.loading) {
     props.setLoading(loading);
@@ -133,7 +132,7 @@ function LocationSearch(props: {
   const stickyH3Cells = useRef<string[]>([]);
   if (h3Cells !== undefined) {
     stickyH3Cells.current = h3Cells;
-  }  
+  }
 
   const stickyRows = useRef<any[]>([]);
   if (rows.length > 0 || loading === false) {
@@ -149,15 +148,9 @@ function LocationSearch(props: {
         return [lat, lng] as LatLngTuple;
       });
       tilingPolygons.push({ polygon: leafletPolygon, cell });
-    }    
-  }
-  
-  console.log(
-    "map bounds",
-    `long: ${map.getBounds().getWest()} -> ${map.getBounds().getEast()}`,
-    `lat: ${map.getBounds().getSouth()} -> ${map.getBounds().getNorth()}`,
-  );
-  
+    }
+  }  
+
   return (
     <>
       {tilingPolygons.map(({ polygon, cell }, i) => (

@@ -4,6 +4,7 @@ import { Point, point } from "../../src/client";
 import { geospatial } from ".";
 import { Id } from "./_generated/dataModel";
 import { rectangle } from "../../src/component/types";
+import { loadWasm } from "./s2Bindings";
 
 export const execute = query({
   args: {
@@ -75,13 +76,16 @@ export const execute = query({
   },
 });
 
+
+
 export const h3Cells = query({
   args: {
     rectangle,
     maxResolution: v.number(),
   },
   returns: v.array(v.string()),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => {    
+    await loadWasm();
     return await geospatial.debugH3Cells(
       ctx,
       args.rectangle,
