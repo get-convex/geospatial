@@ -123,14 +123,14 @@ function LocationSearch(props: {
   if (loading !== props.loading) {
     props.setLoading(loading);
   }
-  const h3Cells = useQuery(api.search.h3Cells, {
+  const cells = useQuery(api.search.debugCells, {
     rectangle,
     maxResolution: 20,
   });
 
-  const stickyH3Cells = useRef<{ token: string; vertices: Point[] }[]>([]);
-  if (h3Cells !== undefined) {
-    stickyH3Cells.current = h3Cells;
+  const stickyCells = useRef<{ token: string; vertices: Point[] }[]>([]);
+  if (cells !== undefined) {
+    stickyCells.current = cells;
   }
 
   const stickyRows = useRef<any[]>([]);
@@ -139,7 +139,7 @@ function LocationSearch(props: {
   }
 
   const tilingPolygons: { polygon: LatLngExpression[]; cell: string }[] = [];
-  for (const { token, vertices } of stickyH3Cells.current) {
+  for (const { token, vertices } of stickyCells.current) {
     const leafletPolygon = vertices.map((p) => {
       return [p.latitude, p.longitude] as LatLngTuple;
     });
@@ -247,9 +247,11 @@ function App() {
         center={manhattan as LatLngExpression}
         id="mapId"
         zoom={15}
+        // TODO: Leaflet doesn't handle the antimeridian, so bound the viewport away from the edges.
+        // Convex's underlying geospatial index, however, uses spherical geometry and is fine.
         maxBounds={latLngBounds([
-          [-80, -179.9],
-          [80, 179.9],
+          [-80, -175],
+          [80, 175],
         ])}
         maxBoundsViscosity={1.0}
         bounceAtZoomLimits={false}

@@ -174,12 +174,12 @@ export class GeospatialIndex<
    * @param maxResolution - The maximum resolution to use when querying.
    * @returns - An array of S2 cell identifiers and their vertices.
    */
-  async debugH3Cells(
+  async debugCells(
     ctx: QueryCtx,
     rectangle: Rectangle,
     maxResolution: number,
   ): Promise<{ token: string; vertices: Point[] }[]> {
-    const resp = await ctx.runQuery(this.component.query.debugH3Cells, {
+    const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
       maxResolution,
     });

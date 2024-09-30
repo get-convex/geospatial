@@ -67,16 +67,12 @@ export const execute = query({
   },
 });
 
-export const h3Cells = query({
+export const debugCells = query({
   args: {
     rectangle,
     maxResolution: v.number(),
   },
   handler: async (ctx, args) => {
-    return await geospatial.debugH3Cells(
-      ctx,
-      args.rectangle,
-      args.maxResolution,
-    );
+    return await geospatial.debugCells(ctx, args.rectangle, args.maxResolution);
   },
 });

@@ -113,7 +113,7 @@ export type Mounts = {
     >;
   };
   query: {
-    debugH3Cells: FunctionReference<
+    debugCells: FunctionReference<
       "query",
       "public",
       {

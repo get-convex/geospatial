@@ -37,7 +37,7 @@ const queryResult = v.object({
   coordinates: point,
 });
 
-export const debugH3Cells = query({
+export const debugCells = query({
   args: {
     rectangle,
     maxResolution: v.number(),
@@ -49,7 +49,6 @@ export const debugH3Cells = query({
     }),
   ),
   handler: async (ctx, args) => {
-    console.time("debugH3Cells");
     const s2 = await S2Bindings.load();
     const cells = s2.coverRectangle(args.rectangle, args.maxResolution);
     const result = cells.map((cell) => {
@@ -57,7 +56,6 @@ export const debugH3Cells = query({
       const vertices = s2.cellVertexes(cell);
       return { token, vertices };
     });
-    console.timeEnd("debugH3Cells");
     return result;
   },
 });

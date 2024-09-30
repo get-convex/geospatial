@@ -87,7 +87,7 @@ export class CellRange extends DatabaseRange {
       })
       .take(this.prefetchSize);
     this.logger.debug(
-      `Seek query for h3 cell ${this.cell} returned ${docs.length} results`,
+      `Seek query for cell ${this.cell} returned ${docs.length} results`,
       docs,
     );
     return docs.map((doc) => doc.tupleKey);

@@ -97,7 +97,7 @@ export declare const components: {
       >;
     };
     query: {
-      debugH3Cells: FunctionReference<
+      debugCells: FunctionReference<
         "query",
         "internal",
         {
