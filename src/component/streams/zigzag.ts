@@ -28,7 +28,7 @@ export interface PointSet {
 }
 
 export type Stats = {
-  h3Cells: number;
+  cells: number;
   queriesIssued: number;
   rowsRead: number;
   rowsPostFiltered: number;

@@ -17,7 +17,7 @@ subprocess.check_call(
 )
 with open("../dist/s2-bindings.wasm", "rb") as f:
     wasm = f.read()
-    with open("../dist/s2-bindings.js", "wb") as f:
+    with open("../src/component/lib/s2wasm.js", "wb") as f:
         f.write(b'export const wasmSource = "')
         f.write(base64.b64encode(wasm))
         f.write(b'";\n')

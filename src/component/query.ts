@@ -1,18 +1,17 @@
 import { Infer, v } from "convex/values";
 import { Point, point, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
-import { coverRectangle, rectangleToPolygon } from "./lib/geometry.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
 import { Union } from "./streams/union.js";
 import { FilterKeyRange } from "./streams/filterKeyRange.js";
-import { H3CellRange } from "./streams/h3CellRange.js";
+import { CellRange } from "./streams/cellRange.js";
 import { interval } from "./lib/interval.js";
 import { decodeTupleKey, TupleKey } from "./lib/tupleKey.js";
 import { Channel, ChannelClosedError } from "async-channel";
 import { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
-import { S2Bindings } from "../../example/convex/s2Bindings.js";
+import { S2Bindings } from "./lib/s2Bindings.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -50,7 +49,7 @@ export const debugH3Cells = query({
   handler: async (ctx, args) => {
     console.time('debugH3Cells')
     const s2 = await S2Bindings.load();
-    const cells = s2.coverRectangle(args.rectangle.south, args.rectangle.west, args.rectangle.north, args.rectangle.east, args.maxResolution);    
+    const cells = s2.coverRectangle(args.rectangle, args.maxResolution);
     const result = cells.map((cell) => {
       const token = s2.cellIDToken(cell);
       const vertices = s2.cellVertexes(cell);
@@ -96,40 +95,27 @@ export const execute = query({
       }
     }
     const { rectangle } = args.query;
-    const h3CellsArray = s2.coverRectangle(rectangle.south, rectangle.west, rectangle.north, rectangle.east, args.maxResolution)
-      .map((cellID) => s2.cellIDToken(cellID));    
-    const h3Cells = new Set(h3CellsArray);
-    console.log('S2 cells', h3Cells)
+    const cells = s2.coverRectangle(rectangle, args.maxResolution).map((cellID) => s2.cellIDToken(cellID));        
     
-    // const queryPolygon = rectangleToPolygon(args.query.rectangle);
-
-    // // Second, convert the rectangle to a set of H3 cells.
-    // const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
-    // if (!h3Cells) {
-    //   logger.warn(
-    //     `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,
-    //   );
-    //   return { results: [] } as ExecuteResult;
-    // }
     const stats: Stats = {
-      h3Cells: h3Cells.size,
+      cells: cells.length,
       queriesIssued: 0,
       rowsRead: 0,
       rowsPostFiltered: 0,
     };
-    const h3SRanges = [...h3Cells].map(
-      (h3Cell) =>
-        new H3CellRange(
+    const cellRanges = cells.map(
+      (cell) =>
+        new CellRange(
           ctx,
           logger,
-          h3Cell,
+          cell,
           args.cursor,
           sorting.interval,
           PREFETCH_SIZE,
           stats,
         ),
     );
-    const h3Stream = new Union(h3SRanges);
+    const cellStream = new Union(cellRanges);
 
     // Third, build up the streams for filter keys.
     const mustRanges: FilterKeyRange[] = [];
@@ -151,7 +137,7 @@ export const execute = query({
     }
 
     // Fourth, build up the final query stream.
-    const intersectionStreams: PointSet[] = [h3Stream];
+    const intersectionStreams: PointSet[] = [cellStream];
     if (shouldRanges.length > 0) {
       intersectionStreams.push(new Union(shouldRanges));
     }
@@ -207,7 +193,7 @@ export const execute = query({
             throw new Error("Internal error: document not found");
           }
 
-          const contains = s2.rectangleContains(rectangle.south, rectangle.west, rectangle.north, rectangle.east, doc.coordinates.latitude, doc.coordinates.longitude);
+          const contains = s2.rectangleContains(rectangle, doc.coordinates);
           if (!contains) {
             stats.rowsPostFiltered++;
             continue;

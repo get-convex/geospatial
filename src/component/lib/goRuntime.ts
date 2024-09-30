@@ -1,72 +1,3 @@
-import { wasmSource } from '../../dist/s2-bindings.js';
-import { Point } from '../../src/component/types.js';
-
-export type CellID = BigInt;
-
-export class S2Bindings {
-    private decoder = new TextDecoder();
-    private wasmMemory: Uint8Array;
-    
-    constructor(private exports: any, private go: Go) {
-        this.wasmMemory = new Uint8Array(exports.memory.buffer);
-    }
-
-    static async load(): Promise<S2Bindings> {
-        const wasmBinary = atob(wasmSource);
-        const wasmBuffer = new Uint8Array(wasmBinary.length);
-        for (let i = 0; i < wasmBinary.length; i++) {
-          wasmBuffer[i] = wasmBinary.charCodeAt(i);
-        }
-        const go = new Go();
-        const { instance } = await WebAssembly.instantiate(wasmBuffer, go.importObject);
-        await go.run(instance);
-        return new S2Bindings(instance.exports, go);
-    }
-
-    cellIDFromLatLng(latDeg: number, lngDeg: number): CellID {
-        return this.exports.cellIDFromLatLng(latDeg, lngDeg);
-    }
-
-    cellIDToken(cellID: CellID): string {
-        const len = this.exports.cellIDToken(cellID);
-        if (len < 0) {
-            throw new Error(`Failed to get cell ID token`);
-        }
-        const ptr = this.exports.tokenBufferPtr();    
-        const buffer = this.wasmMemory.slice(ptr + 0, ptr + len);
-        return this.decoder.decode(buffer.buffer);
-    }
-
-    cellIDParent(cellID: CellID, level: number): CellID {
-        return this.exports.cellIDParent(cellID, level);
-    }
-
-    coverRectangle(latDeg1: number, lngDeg1: number, latDeg2: number, lngDeg2: number, maxResolution: number): CellID[] {
-        const len = this.exports.coverRectangle(latDeg1, lngDeg1, latDeg2, lngDeg2, maxResolution);
-        if (len < 0) {
-            throw new Error(`Failed to coverRectangle`);
-        }
-        const ptr = this.exports.coverRectangleBufferPtr();        
-        const buffer = this.wasmMemory.slice(ptr + 0, ptr + len * 8);
-        const uint64s = new BigUint64Array(buffer.buffer);
-        return [...uint64s];        
-    }        
-
-    rectangleContains(latDeg1: number, lngDeg1: number, latDeg2: number, lngDeg2: number, pLat: number, pLng: number): boolean {
-        return this.exports.rectangleContains(latDeg1, lngDeg1, latDeg2, lngDeg2, pLat, pLng);
-    }
-
-    cellVertexes(cellID: CellID): Point[] {
-        const result = [];
-        for (let k = 0; k < 4; k++) {
-            const latitude = this.exports.cellVertexLatDegrees(cellID, k);
-            const longitude = this.exports.cellVertexLngDegrees(cellID, k);
-            result.push({ latitude, longitude });
-        }
-        return result;
-    }
-}
-
 // Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -84,7 +15,7 @@ const decoder = new TextDecoder("utf-8");
 let reinterpretBuf = new DataView(new ArrayBuffer(8));
 var logLine: any[] = [];
 
-class Go {
+export class Go {
     importObject: any;
     _inst: any;
     _values: any;

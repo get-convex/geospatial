@@ -1,13 +1,13 @@
-import { Infer, v, Validator } from "convex/values";
+import { Infer, v } from "convex/values";
 
 export type { Primitive } from "./lib/primitive.js";
 export { primitive } from "./lib/primitive.js";
 
-// Latitudes can be between -90 and 90.
+// Latitudes are in degrees.
 export const latitude = v.number();
 export type Latitude = Infer<typeof latitude>;
 
-// Longitudes can be between -180 and 180.
+// Longitudes are in degrees.
 export const longitude = v.number();
 export type Longitude = Infer<typeof longitude>;
 

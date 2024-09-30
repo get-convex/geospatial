@@ -24,7 +24,6 @@ import type  { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
-import { cellToPolygon } from "../../src/component/lib/geometry.js";
 
 const manhattan = [40.746, -73.985];
 

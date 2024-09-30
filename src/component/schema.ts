@@ -10,10 +10,10 @@ export default defineSchema({
     filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
   }).index("key", ["key"]),
 
-  pointsbyH3Cell: defineTable({
-    h3Cell: v.string(),
+  pointsByCell: defineTable({
+    cell: v.string(),
     tupleKey: v.string(),
-  }).index("h3Cell", ["h3Cell", "tupleKey"]),
+  }).index("cell", ["cell", "tupleKey"]),
 
   pointsByFilterKey: defineTable({
     filterKey: v.string(),

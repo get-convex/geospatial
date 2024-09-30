@@ -4,7 +4,6 @@ import { Point, point } from "../../src/client";
 import { geospatial } from ".";
 import { Id } from "./_generated/dataModel";
 import { rectangle } from "../../src/component/types";
-import { S2Bindings } from "./s2Bindings";
 
 export const execute = query({
   args: {
@@ -75,10 +74,7 @@ export const h3Cells = query({
     rectangle,
     maxResolution: v.number(),
   },  
-  handler: async (ctx, args) => {    
-    // const s2 = await S2Bindings.load();
-    // const cellIDs = s2.coverRectangle(args.rectangle.south, args.rectangle.west, args.rectangle.north, args.rectangle.east, args.maxResolution);
-    // console.log(cellIDs, cellIDs.map((s) => s2.cellIDToken(s)));        
+  handler: async (ctx, args) => {        
     return await geospatial.debugH3Cells(
       ctx,
       args.rectangle,
