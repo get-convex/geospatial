@@ -5,13 +5,13 @@ import {
   mutation,
   query,
 } from "./_generated/server.js";
-import { point, primitive } from "./types.js";
-import { latLngToCells } from "./lib/geometry.js";
+import { Point, point, primitive } from "./types.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
 import { increment } from "./counter.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
-import { h3CellCounterKey } from "./streams/h3CellRange.js";
+import { cellCounterKey } from "./streams/cellRange.js";
 import { internal } from "./_generated/api.js";
+import { S2Bindings } from "./lib/s2Bindings.js";
 
 const geoDocument = v.object({
   key: v.string(),
@@ -20,25 +20,39 @@ const geoDocument = v.object({
   filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
 });
 
+function s2Cells(
+  s2: S2Bindings,
+  point: Point,
+  maxResolution: number,
+): string[] {
+  const leafCellID = s2.cellIDFromPoint(point);
+  const cells = [];
+  for (let i = 0; i <= maxResolution; i++) {
+    const parentCellID = s2.cellIDParent(leafCellID, i);
+    cells.push(s2.cellIDToken(parentCellID));
+  }
+  return cells;
+}
+
 export const insert = mutation({
   args: {
     document: geoDocument,
     maxResolution: v.number(),
   },
   handler: async (ctx, args) => {
+    const s2 = await S2Bindings.load();
+
     await remove(ctx, {
       key: args.document.key,
       maxResolution: args.maxResolution,
     });
     const pointId = await ctx.db.insert("points", args.document as any);
-    const cells = latLngToCells(args.maxResolution, args.document.coordinates);
+
+    const cells = s2Cells(s2, args.document.coordinates, args.maxResolution);
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
-    for (const h3Cell of cells) {
-      await ctx.db.insert("pointsbyH3Cell", {
-        h3Cell,
-        tupleKey,
-      });
-      await increment(ctx, h3CellCounterKey(h3Cell), 1);
+    for (const cell of cells) {
+      await ctx.db.insert("pointsByCell", { cell, tupleKey });
+      await increment(ctx, cellCounterKey(cell), 1);
     }
     for (const [filterKey, filterDoc] of Object.entries(
       args.document.filterKeys,
@@ -81,6 +95,8 @@ export const remove = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    const s2 = await S2Bindings.load();
+
     const existing = await ctx.db
       .query("points")
       .withIndex("key", (q) => q.eq("key", args.key))
@@ -88,22 +104,21 @@ export const remove = mutation({
     if (!existing) {
       return false;
     }
-    const cells = latLngToCells(args.maxResolution, existing.coordinates);
+
+    const cells = s2Cells(s2, existing.coordinates, args.maxResolution);
     const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
-    for (const h3Cell of cells) {
-      const existingH3Cell = await ctx.db
-        .query("pointsbyH3Cell")
-        .withIndex("h3Cell", (q) =>
-          q.eq("h3Cell", h3Cell).eq("tupleKey", tupleKey),
-        )
+    for (const cell of cells) {
+      const existingCell = await ctx.db
+        .query("pointsByCell")
+        .withIndex("cell", (q) => q.eq("cell", cell).eq("tupleKey", tupleKey))
         .unique();
-      if (!existingH3Cell) {
+      if (!existingCell) {
         throw new Error(
-          `Invariant failed: Missing h3Cell ${h3Cell} for point ${existing._id}`,
+          `Invariant failed: Missing cell ${cell} for point ${existing._id}`,
         );
       }
-      await ctx.db.delete(existingH3Cell._id);
-      await increment(ctx, h3CellCounterKey(h3Cell), -1);
+      await ctx.db.delete(existingCell._id);
+      await increment(ctx, cellCounterKey(cell), -1);
     }
     for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
       const valueArray = filterDoc instanceof Array ? filterDoc : [filterDoc];
@@ -132,7 +147,7 @@ export const remove = mutation({
 });
 
 const cursor = v.object({
-  table: v.union(v.literal("h3"), v.literal("filter")),
+  table: v.union(v.literal("cell"), v.literal("filter")),
   lowerBound: v.optional(v.string()),
 });
 
@@ -144,7 +159,7 @@ export const backfillCounts = internalAction({
   },
   handler: async (ctx, args) => {
     let currentCursor: Infer<typeof cursor> | null = args.cursor ?? {
-      table: "h3",
+      table: "cell",
     };
     let i = 0;
     while (currentCursor) {
@@ -173,9 +188,9 @@ export const backfillPage = internalMutation({
   },
   returns: v.union(v.null(), cursor),
   handler: async (ctx, args) => {
-    if (args.cursor.table === "h3") {
+    if (args.cursor.table === "cell") {
       const points = await ctx.db
-        .query("pointsbyH3Cell")
+        .query("pointsByCell")
         .withIndex("by_id", (q) =>
           args.cursor.lowerBound
             ? q.gt("_id", args.cursor.lowerBound as any)
@@ -187,11 +202,11 @@ export const backfillPage = internalMutation({
           table: "filter" as const,
         };
       }
-      for (const h3Key of points) {
-        await increment(ctx, h3CellCounterKey(h3Key.h3Cell), 1);
+      for (const cellKey of points) {
+        await increment(ctx, cellCounterKey(cellKey.cell), 1);
       }
       return {
-        table: "h3" as const,
+        table: "cell" as const,
         lowerBound: points[points.length - 1]._id,
       };
     } else if (args.cursor.table === "filter") {

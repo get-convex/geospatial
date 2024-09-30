@@ -97,7 +97,7 @@ export declare const components: {
       >;
     };
     query: {
-      debugH3Cells: FunctionReference<
+      debugCells: FunctionReference<
         "query",
         "internal",
         {
@@ -109,7 +109,10 @@ export declare const components: {
             west: number;
           };
         },
-        Array<string>
+        Array<{
+          token: string;
+          vertices: Array<{ latitude: number; longitude: number }>;
+        }>
       >;
       execute: FunctionReference<
         "query",

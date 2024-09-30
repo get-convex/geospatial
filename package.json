@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "npm run build:esm && npm run build:cjs",
+    "build:go": "cd s2-bindings && python build.py",
     "build:esm": "tsc --project ./esm.json && echo '{\\n  \"type\": \"module\"\\n}' > dist/esm/package.json",
     "build:cjs": "tsc --project ./commonjs.json && echo '{\\n  \"type\": \"commonjs\"\\n}' > dist/commonjs/package.json",
     "typecheck": "tsc --noEmit",
@@ -51,11 +52,8 @@
     }
   },
   "dependencies": {
-    "@types/d3-array": "^3.2.1",
     "async-channel": "^0.2.0",
     "convex": "1.16.2",
-    "d3-array": "^3.2.4",
-    "h3-js": "^4.1.0",
     "heap-js": "^2.5.0"
   },
   "devDependencies": {

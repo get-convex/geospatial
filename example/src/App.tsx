@@ -11,16 +11,25 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { cellToVertexes, vertexToLatLng } from "h3-js";
-import { Icon, LatLngExpression } from "leaflet";
+import {
+  Icon,
+  latLngBounds,
+  LatLngBounds,
+  LatLngExpression,
+  LatLngTuple,
+} from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
-import { Point } from "../../src/client";
+import type { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
 
 const manhattan = [40.746, -73.985];
+
+function normalizeLongitude(longitude: number) {
+  return ((((longitude + 180) % 360) + 360) % 360) - 180;
+}
 
 function LocationSearch(props: {
   loading: boolean;
@@ -76,7 +85,14 @@ function LocationSearch(props: {
   );
   useMapEvents({
     moveend: () => {
-      setBounds(map.getBounds());
+      const bounds = map.getBounds();
+      const normalizedWest = normalizeLongitude(bounds.getWest());
+      const normalizedEast = normalizeLongitude(bounds.getEast());
+      const normalizedBounds = new LatLngBounds([
+        [bounds.getSouth(), normalizedWest],
+        [bounds.getNorth(), normalizedEast],
+      ]);
+      setBounds(normalizedBounds);
     },
     contextmenu: (e) => {
       e.originalEvent.preventDefault();
@@ -107,14 +123,14 @@ function LocationSearch(props: {
   if (loading !== props.loading) {
     props.setLoading(loading);
   }
-  const h3Cells = useQuery(api.search.h3Cells, {
+  const cells = useQuery(api.search.debugCells, {
     rectangle,
-    maxResolution: 10,
+    maxResolution: 20,
   });
 
-  const stickyH3Cells = useRef<string[]>([]);
-  if (h3Cells !== undefined) {
-    stickyH3Cells.current = h3Cells;
+  const stickyCells = useRef<{ token: string; vertices: Point[] }[]>([]);
+  if (cells !== undefined) {
+    stickyCells.current = cells;
   }
 
   const stickyRows = useRef<any[]>([]);
@@ -122,26 +138,25 @@ function LocationSearch(props: {
     stickyRows.current = rows;
   }
 
-  const tilingPolygons: { polygon: number[][][]; cell: string }[] = [];
-  for (const cell of stickyH3Cells.current) {
-    const polygon = [];
-    for (const vertex of cellToVertexes(cell)) {
-      const coords = vertexToLatLng(vertex);
-      polygon.push(coords);
-    }
-    tilingPolygons.push({ polygon: [polygon], cell });
+  const tilingPolygons: { polygon: LatLngExpression[]; cell: string }[] = [];
+  for (const { token, vertices } of stickyCells.current) {
+    const leafletPolygon = vertices.map((p) => {
+      return [p.latitude, p.longitude] as LatLngTuple;
+    });
+    tilingPolygons.push({ polygon: leafletPolygon, cell: token });
   }
+
   return (
     <>
       {tilingPolygons.map(({ polygon, cell }, i) => (
         <Polygon
           key={i}
           pathOptions={{ color: "blue", lineCap: "round", lineJoin: "bevel" }}
-          positions={polygon as any}
+          positions={polygon}
           eventHandlers={{
             click: (e) => {
               e.originalEvent.preventDefault();
-              console.log(`Clicked on cell ${cell}`);
+              console.log(`Clicked on cell ${cell}`, polygon);
             },
           }}
         />
@@ -228,7 +243,22 @@ function App() {
           </span>
         )}
       </div>
-      <MapContainer center={manhattan as LatLngExpression} id="mapId" zoom={15}>
+      <MapContainer
+        center={manhattan as LatLngExpression}
+        id="mapId"
+        zoom={15}
+        // TODO: Leaflet doesn't handle the antimeridian, so bound the viewport away from the edges.
+        // Convex's underlying geospatial index, however, uses spherical geometry and is fine.
+        maxBounds={latLngBounds([
+          [-80, -175],
+          [80, 175],
+        ])}
+        maxBoundsViscosity={1.0}
+        bounceAtZoomLimits={false}
+        maxZoom={18}
+        minZoom={4}
+        zoomSnap={1}
+      >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

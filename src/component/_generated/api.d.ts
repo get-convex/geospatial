@@ -13,15 +13,17 @@
 import type * as counter from "../counter.js";
 import type * as document from "../document.js";
 import type * as lib_d64 from "../lib/d64.js";
-import type * as lib_geometry from "../lib/geometry.js";
+import type * as lib_goRuntime from "../lib/goRuntime.js";
 import type * as lib_interval from "../lib/interval.js";
 import type * as lib_logging from "../lib/logging.js";
 import type * as lib_primitive from "../lib/primitive.js";
+import type * as lib_s2Bindings from "../lib/s2Bindings.js";
+import type * as lib_s2wasm from "../lib/s2wasm.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
 import type * as query from "../query.js";
+import type * as streams_cellRange from "../streams/cellRange.js";
 import type * as streams_databaseRange from "../streams/databaseRange.js";
 import type * as streams_filterKeyRange from "../streams/filterKeyRange.js";
-import type * as streams_h3CellRange from "../streams/h3CellRange.js";
 import type * as streams_intersection from "../streams/intersection.js";
 import type * as streams_union from "../streams/union.js";
 import type * as streams_zigzag from "../streams/zigzag.js";
@@ -44,15 +46,17 @@ declare const fullApi: ApiFromModules<{
   counter: typeof counter;
   document: typeof document;
   "lib/d64": typeof lib_d64;
-  "lib/geometry": typeof lib_geometry;
+  "lib/goRuntime": typeof lib_goRuntime;
   "lib/interval": typeof lib_interval;
   "lib/logging": typeof lib_logging;
   "lib/primitive": typeof lib_primitive;
+  "lib/s2Bindings": typeof lib_s2Bindings;
+  "lib/s2wasm": typeof lib_s2wasm;
   "lib/tupleKey": typeof lib_tupleKey;
   query: typeof query;
+  "streams/cellRange": typeof streams_cellRange;
   "streams/databaseRange": typeof streams_databaseRange;
   "streams/filterKeyRange": typeof streams_filterKeyRange;
-  "streams/h3CellRange": typeof streams_h3CellRange;
   "streams/intersection": typeof streams_intersection;
   "streams/union": typeof streams_union;
   "streams/zigzag": typeof streams_zigzag;
@@ -109,14 +113,17 @@ export type Mounts = {
     >;
   };
   query: {
-    debugH3Cells: FunctionReference<
+    debugCells: FunctionReference<
       "query",
       "public",
       {
         maxResolution: number;
         rectangle: { east: number; north: number; south: number; west: number };
       },
-      Array<string>
+      Array<{
+        token: string;
+        vertices: Array<{ latitude: number; longitude: number }>;
+      }>
     >;
     execute: FunctionReference<
       "query",

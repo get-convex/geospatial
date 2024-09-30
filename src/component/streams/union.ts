@@ -105,7 +105,7 @@ export class Union implements PointSet {
   }
 
   async sizeHint(): Promise<number> {
-    // Assume the underlying streams are disjoint (which is true for h3 cells at the same resolution).)
+    // Assume the underlying streams are disjoint (which is true for our covering).
     const promises = this.streams.map((stream) => stream.sizeHint());
     const results = await Promise.all(promises);
     return results.reduce((a, b) => a + b, 0);

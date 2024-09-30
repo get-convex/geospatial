@@ -24,7 +24,7 @@ if (typeof Convex === "undefined") {
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 10;
+export const DEFAULT_MAX_RESOLUTION = 20;
 
 export type GeospatialDocument = {
   key: string;
@@ -40,13 +40,13 @@ export class GeospatialIndex<
   maxResolution: number;
 
   /**
-   * Create a new geospatial index, powered by H3 and Convex. This index maps unique string keys to geographic coordinates
+   * Create a new geospatial index, powered by S2 and Convex. This index maps unique string keys to geographic coordinates
    * on the Earth's surface, with the ability to efficiently query for all keys within a given geographic area.
    *
    * @param component - The registered geospatial index from `components`.
-   * @param maxResolution - The maximum resolution to use when querying. See https://h3geo.org/docs/core-library/restable/
+   * @param maxResolution - The maximum resolution to use when querying. See https://s2geometry.io/resources/s2cell_statistics
    * for the feature size at each resolution. Higher resolution indexes will be able to distinguish between closer
-   * points at the cost of storage, insertion time, and query time. This defaults to 10, which has ~28m resolution.
+   * points at the cost of storage, insertion time, and query time. This defaults to 20, which has ~10m resolution.
    */
   constructor(
     private component: UseApi<typeof api>,
@@ -56,17 +56,17 @@ export class GeospatialIndex<
     },
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
-    if (process.env.ACTION_RETRIER_LOG_LEVEL) {
+    if (process.env.GEOSPATIAL_LOG_LEVEL) {
       if (
         !["DEBUG", "INFO", "WARN", "ERROR"].includes(
-          process.env.ACTION_RETRIER_LOG_LEVEL,
+          process.env.GEOSPATIAL_LOG_LEVEL,
         )
       ) {
         console.warn(
-          `Invalid log level (${process.env.ACTION_RETRIER_LOG_LEVEL}), defaulting to "INFO"`,
+          `Invalid log level (${process.env.GEOSPATIAL_LOG_LEVEL}), defaulting to "INFO"`,
         );
       }
-      DEFAULT_LOG_LEVEL = process.env.ACTION_RETRIER_LOG_LEVEL as LogLevel;
+      DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
     }
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
     this.maxResolution = options?.maxResolution ?? DEFAULT_MAX_RESOLUTION;
@@ -167,19 +167,19 @@ export class GeospatialIndex<
   }
 
   /**
-   * Debug the H3 cells that would be queried for a given rectangle.
+   * Debug the S2 cells that would be queried for a given rectangle.
    *
    * @param ctx - The Convex query context.
    * @param rectangle - The geographic area to query.
    * @param maxResolution - The maximum resolution to use when querying.
-   * @returns - An array of H3 cell identifiers.
+   * @returns - An array of S2 cell identifiers and their vertices.
    */
-  async debugH3Cells(
+  async debugCells(
     ctx: QueryCtx,
     rectangle: Rectangle,
     maxResolution: number,
-  ): Promise<string[]> {
-    const resp = await ctx.runQuery(this.component.query.debugH3Cells, {
+  ): Promise<{ token: string; vertices: Point[] }[]> {
+    const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
       maxResolution,
     });
