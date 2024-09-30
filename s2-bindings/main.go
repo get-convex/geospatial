@@ -47,12 +47,12 @@ func coverRectangleBufferPtr() *[COVER_RECTANGLE_BUFFER_SIZE]uint64 {
 }
 
 //export coverRectangle
-func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64) int {
+func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, maxResolution int) int {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(latDeg2, lngDeg2))
 	rc := s2.RegionCoverer{
-		MaxLevel: 30,
-		MaxCells: 64,
+		MaxLevel: maxResolution,
+		MaxCells: 16,
 	}
 	covering := rc.Covering(s2.Region(rect))
 	if len(covering) > COVER_RECTANGLE_BUFFER_SIZE {
@@ -62,6 +62,28 @@ func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 f
 		coverRectangleBuffer[i] = uint64(cellID)
 	}
 	return len(covering)
+}
+
+//export rectangleContains
+func rectangleContains(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, pLat float64, pLng float64) bool {
+	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))
+	rect = rect.AddPoint(s2.LatLngFromDegrees(latDeg2, lngDeg2))
+	point := s2.LatLngFromDegrees(pLat, pLng)
+	return rect.ContainsPoint(s2.PointFromLatLng(point))
+}
+
+//export cellVertexLatDegrees
+func cellVertexLatDegrees(cellID uint64, k int) float64 {
+	cell := s2.CellFromCellID((s2.CellID(cellID)))
+	point := cell.Vertex(k)
+	return s2.LatLngFromPoint(point).Lat.Degrees()
+}
+
+//export cellVertexLngDegrees
+func cellVertexLngDegrees(cellID uint64, k int) float64 {
+	cell := s2.CellFromCellID((s2.CellID(cellID)))
+	point := cell.Vertex(k)
+	return s2.LatLngFromPoint(point).Lng.Degrees()
 }
 
 // main is required for the `wasip1` target, even if it isn't used.

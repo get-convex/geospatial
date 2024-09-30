@@ -20,7 +20,7 @@ import {
 } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
-import { Point } from "../../src/client";
+import type  { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
@@ -126,10 +126,10 @@ function LocationSearch(props: {
   }
   const h3Cells = useQuery(api.search.h3Cells, {
     rectangle,
-    maxResolution: 10,
+    maxResolution: 20,
   });
 
-  const stickyH3Cells = useRef<string[]>([]);
+  const stickyH3Cells = useRef<{ token: string, vertices: Point[] }[]>([]);
   if (h3Cells !== undefined) {
     stickyH3Cells.current = h3Cells;
   }
@@ -140,15 +140,11 @@ function LocationSearch(props: {
   }
 
   const tilingPolygons: { polygon: LatLngExpression[]; cell: string }[] = [];
-  for (const cell of stickyH3Cells.current) {
-    const { polygons } = cellToPolygon(cell);
-    for (const polygon of polygons) {
-      const leafletPolygon = polygon.geometry.coordinates[0].map((coord) => {
-        const [lng, lat] = coord;
-        return [lat, lng] as LatLngTuple;
-      });
-      tilingPolygons.push({ polygon: leafletPolygon, cell });
-    }
+  for (const {token, vertices} of stickyH3Cells.current) {    
+    const leafletPolygon = vertices.map((p) => {      
+      return [p.latitude, p.longitude] as LatLngTuple;
+    });
+    tilingPolygons.push({ polygon: leafletPolygon, cell: token });    
   }  
 
   return (

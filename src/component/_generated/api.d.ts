@@ -118,7 +118,10 @@ export type Mounts = {
         maxResolution: number;
         rectangle: { east: number; north: number; south: number; west: number };
       },
-      Array<string>
+      Array<{
+        token: string;
+        vertices: Array<{ latitude: number; longitude: number }>;
+      }>
     >;
     execute: FunctionReference<
       "query",

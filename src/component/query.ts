@@ -12,6 +12,7 @@ import { decodeTupleKey, TupleKey } from "./lib/tupleKey.js";
 import { Channel, ChannelClosedError } from "async-channel";
 import { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
+import { S2Bindings } from "../../example/convex/s2Bindings.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -42,12 +43,21 @@ export const debugH3Cells = query({
     rectangle,
     maxResolution: v.number(),
   },
-  returns: v.array(v.string()),
+  returns: v.array(v.object({
+    token: v.string(),
+    vertices: v.array(point),
+  })),
   handler: async (ctx, args) => {
-    const logger = createLogger("DEBUG");
-    const queryPolygon = rectangleToPolygon(args.rectangle);
-    const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
-    return h3Cells ? [...h3Cells] : [];
+    console.time('debugH3Cells')
+    const s2 = await S2Bindings.load();
+    const cells = s2.coverRectangle(args.rectangle.south, args.rectangle.west, args.rectangle.north, args.rectangle.east, args.maxResolution);    
+    const result = cells.map((cell) => {
+      const token = s2.cellIDToken(cell);
+      const vertices = s2.cellVertexes(cell);
+      return { token, vertices };
+    });
+    console.timeEnd('debugH3Cells')
+    return result;
   },
 });
 
@@ -68,6 +78,8 @@ export const execute = query({
   handler: async (ctx, args) => {
     const logger = createLogger(args.logLevel);
 
+    const s2 = await S2Bindings.load();
+
     logger.time("execute");
     // First, validate the query.
     const { sorting } = args.query;
@@ -83,16 +95,22 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    const queryPolygon = rectangleToPolygon(args.query.rectangle);
+    const { rectangle } = args.query;
+    const h3CellsArray = s2.coverRectangle(rectangle.south, rectangle.west, rectangle.north, rectangle.east, args.maxResolution)
+      .map((cellID) => s2.cellIDToken(cellID));    
+    const h3Cells = new Set(h3CellsArray);
+    console.log('S2 cells', h3Cells)
+    
+    // const queryPolygon = rectangleToPolygon(args.query.rectangle);
 
-    // Second, convert the rectangle to a set of H3 cells.
-    const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
-    if (!h3Cells) {
-      logger.warn(
-        `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,
-      );
-      return { results: [] } as ExecuteResult;
-    }
+    // // Second, convert the rectangle to a set of H3 cells.
+    // const h3Cells = coverRectangle(logger, queryPolygon, args.maxResolution);
+    // if (!h3Cells) {
+    //   logger.warn(
+    //     `Failed to find interior cells for empty rectangle: ${JSON.stringify(args.query.rectangle)}`,
+    //   );
+    //   return { results: [] } as ExecuteResult;
+    // }
     const stats: Stats = {
       h3Cells: h3Cells.size,
       queriesIssued: 0,
@@ -188,10 +206,12 @@ export const execute = query({
           if (doc === null) {
             throw new Error("Internal error: document not found");
           }
-          if (!queryPolygon.containsPoint(doc.coordinates)) {
+
+          const contains = s2.rectangleContains(rectangle.south, rectangle.west, rectangle.north, rectangle.east, doc.coordinates.latitude, doc.coordinates.longitude);
+          if (!contains) {
             stats.rowsPostFiltered++;
             continue;
-          }
+          }          
           results.push({
             key: doc.key,
             coordinates: doc.coordinates,

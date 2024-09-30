@@ -16,6 +16,7 @@ import { increment } from "./counter.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
 import { h3CellCounterKey } from "./streams/h3CellRange.js";
 import { internal } from "./_generated/api.js";
+import { S2Bindings } from "../../example/convex/s2Bindings.js";
 
 const geoDocument = v.object({
   key: v.string(),
@@ -38,7 +39,17 @@ export const insert = mutation({
       maxResolution: args.maxResolution,
     });
     const pointId = await ctx.db.insert("points", args.document as any);
-    const cells = latLngToCells(args.maxResolution, args.document.coordinates);
+
+    const s2 = await S2Bindings.load();
+    const { latitude, longitude } = args.document.coordinates;
+    const leafCellID = s2.cellIDFromLatLng(latitude, longitude);
+
+    const cells = [];
+    for (let i = 0; i <= args.maxResolution; i++) {
+      const parentCellID = s2.cellIDParent(leafCellID, i);
+      cells.push(s2.cellIDToken(parentCellID));
+    }
+
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
     for (const h3Cell of cells) {
       await ctx.db.insert("pointsbyH3Cell", {
@@ -95,7 +106,17 @@ export const remove = mutation({
     if (!existing) {
       return false;
     }
-    const cells = latLngToCells(args.maxResolution, existing.coordinates);
+
+    const s2 = await S2Bindings.load();
+    const { latitude, longitude } = existing.coordinates;
+    const leafCellID = s2.cellIDFromLatLng(latitude, longitude);
+    const cells = [];
+    for (let i = 0; i <= args.maxResolution; i++) {
+      const parentCellID = s2.cellIDParent(leafCellID, i);
+      cells.push(s2.cellIDToken(parentCellID));
+    }
+    // const cells = latLngToCells(args.maxResolution, existing.coordinates);
+    
     const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
     for (const h3Cell of cells) {
       const existingH3Cell = await ctx.db

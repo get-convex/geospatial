@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { geospatial } from ".";
 import { point } from "../../src/client";
 import {
+  action,
   internalAction,
   internalMutation,
   mutation,
@@ -41,7 +42,7 @@ export const addBatch = internalMutation({
   },
 });
 
-export const addMany = internalAction({
+export const addMany = action({
   args: { count: v.number(), batchSize: v.number(), parallelism: v.number() },
   handler: async (ctx, args) => {
     let ix = 0;

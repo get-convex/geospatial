@@ -1,4 +1,5 @@
 import { wasmSource } from '../../dist/s2-bindings.js';
+import { Point } from '../../src/component/types.js';
 
 export type CellID = BigInt;
 
@@ -10,7 +11,7 @@ export class S2Bindings {
         this.wasmMemory = new Uint8Array(exports.memory.buffer);
     }
 
-    static async load() {
+    static async load(): Promise<S2Bindings> {
         const wasmBinary = atob(wasmSource);
         const wasmBuffer = new Uint8Array(wasmBinary.length);
         for (let i = 0; i < wasmBinary.length; i++) {
@@ -18,6 +19,7 @@ export class S2Bindings {
         }
         const go = new Go();
         const { instance } = await WebAssembly.instantiate(wasmBuffer, go.importObject);
+        await go.run(instance);
         return new S2Bindings(instance.exports, go);
     }
 
@@ -25,7 +27,7 @@ export class S2Bindings {
         return this.exports.cellIDFromLatLng(latDeg, lngDeg);
     }
 
-    cellIDToken(cellID: BigInt): string {
+    cellIDToken(cellID: CellID): string {
         const len = this.exports.cellIDToken(cellID);
         if (len < 0) {
             throw new Error(`Failed to get cell ID token`);
@@ -35,12 +37,12 @@ export class S2Bindings {
         return this.decoder.decode(buffer.buffer);
     }
 
-    cellIDParent(cellID: BigInt, level: number): CellID {
+    cellIDParent(cellID: CellID, level: number): CellID {
         return this.exports.cellIDParent(cellID, level);
     }
 
-    coverRectangle(latDeg1: number, lngDeg1: number, latDeg2: number, lngDeg2: number): CellID[] {
-        const len = this.exports.coverRectangle(latDeg1, lngDeg1, latDeg2, lngDeg2);
+    coverRectangle(latDeg1: number, lngDeg1: number, latDeg2: number, lngDeg2: number, maxResolution: number): CellID[] {
+        const len = this.exports.coverRectangle(latDeg1, lngDeg1, latDeg2, lngDeg2, maxResolution);
         if (len < 0) {
             throw new Error(`Failed to coverRectangle`);
         }
@@ -49,58 +51,20 @@ export class S2Bindings {
         const uint64s = new BigUint64Array(buffer.buffer);
         return [...uint64s];        
     }        
-}
 
-export async function loadWasm() {
-    console.time('loadWasm');
-    console.time('wasmParse');
-    
-    console.timeEnd('wasmParse');    
+    rectangleContains(latDeg1: number, lngDeg1: number, latDeg2: number, lngDeg2: number, pLat: number, pLng: number): boolean {
+        return this.exports.rectangleContains(latDeg1, lngDeg1, latDeg2, lngDeg2, pLat, pLng);
+    }
 
-    
-
-    console.time('wasmInstantiate');
-    
-    console.timeEnd('wasmInstantiate');    
-
-    console.time('main');
-    await go.run(instance);
-    console.timeEnd('main');
-
-    const exports = instance.exports as any;
-    console.log('exports', exports);
-
-    try {
-        console.time('cells');
-        const cellID = exports.cellIDFromLatLng(37.7749295, 55.7924486);    
-        console.timeEnd('cells');
-        const token = cellIDToken(exports, cellID);
-        // console.log(30, cellID, cellIDToken(exports, cellID));
-        for (let i = 29; i >= 0; i--) {
-            const parentCellID = exports.cellIDParent(cellID, i);
-            const token = cellIDToken(exports, parentCellID);            
+    cellVertexes(cellID: CellID): Point[] {
+        const result = [];
+        for (let k = 0; k < 4; k++) {
+            const latitude = this.exports.cellVertexLatDegrees(cellID, k);
+            const longitude = this.exports.cellVertexLngDegrees(cellID, k);
+            result.push({ latitude, longitude });
         }
-    } catch (e: any) {
-        console.error('failed to call cells', e)
+        return result;
     }
-
-    try {
-        console.time('coverRectangle');
-        // const coverRectangle = exports.coverRectangle(37.7749295, 55.7924486, 37.7749295, 55.7924486);    
-        const c = coverRectangle(exports, 37.7749295, 55.7924486, 37.7749295, 55.7924486);
-        console.timeEnd('coverRectangle');
-        console.log('coverRectangle', c);
-
-        // for (let i = 0; i < coverRectangle; i++) {
-        //     console.time('coverRectangle');
-        //     const result = exports.coverRectangleResult(i);
-        //     console.log(i, result);
-        // }
-    } catch (e: any) {
-        console.error('failed to call coverRectangle', e)
-    }
-
-    console.timeEnd('loadWasm');
 }
 
 // Copyright 2018 The Go Authors. All rights reserved.

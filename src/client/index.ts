@@ -24,7 +24,7 @@ if (typeof Convex === "undefined") {
   );
 }
 
-export const DEFAULT_MAX_RESOLUTION = 10;
+export const DEFAULT_MAX_RESOLUTION = 20;
 
 export type GeospatialDocument = {
   key: string;
@@ -178,7 +178,7 @@ export class GeospatialIndex<
     ctx: QueryCtx,
     rectangle: Rectangle,
     maxResolution: number,
-  ): Promise<string[]> {
+  ): Promise<{ token: string, vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugH3Cells, {
       rectangle,
       maxResolution,

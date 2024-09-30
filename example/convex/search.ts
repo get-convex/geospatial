@@ -4,7 +4,7 @@ import { Point, point } from "../../src/client";
 import { geospatial } from ".";
 import { Id } from "./_generated/dataModel";
 import { rectangle } from "../../src/component/types";
-import { loadWasm } from "./s2Bindings";
+import { S2Bindings } from "./s2Bindings";
 
 export const execute = query({
   args: {
@@ -23,8 +23,7 @@ export const execute = query({
         coordinates: point,
       }),
     ),
-    nextCursor: v.optional(v.string()),
-    h3Cells: v.array(v.string()),
+    nextCursor: v.optional(v.string()),  
   }),
   async handler(ctx, args) {
     const mustFilterConditions = args.mustFilter.map((emoji) => ({
@@ -61,16 +60,9 @@ export const execute = query({
       }
       const coordinates = coordinatesByKey.get(row._id)!;
       rows.push({ coordinates, ...row });
-    }
-
-    const h3Cells = await geospatial.debugH3Cells(
-      ctx,
-      args.rectangle,
-      geospatial.maxResolution,
-    );
+    }    
     return {
-      rows,
-      h3Cells,
+      rows,      
       nextCursor,
     };
   },
@@ -82,10 +74,11 @@ export const h3Cells = query({
   args: {
     rectangle,
     maxResolution: v.number(),
-  },
-  returns: v.array(v.string()),
+  },  
   handler: async (ctx, args) => {    
-    await loadWasm();
+    // const s2 = await S2Bindings.load();
+    // const cellIDs = s2.coverRectangle(args.rectangle.south, args.rectangle.west, args.rectangle.north, args.rectangle.east, args.maxResolution);
+    // console.log(cellIDs, cellIDs.map((s) => s2.cellIDToken(s)));        
     return await geospatial.debugH3Cells(
       ctx,
       args.rectangle,
