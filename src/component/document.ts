@@ -11,7 +11,7 @@ import { increment } from "./counter.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
 import { cellCounterKey } from "./streams/cellRange.js";
 import { internal } from "./_generated/api.js";
-import { S2Bindings } from "./lib/s2Bindings.js"
+import { S2Bindings } from "./lib/s2Bindings.js";
 
 const geoDocument = v.object({
   key: v.string(),
@@ -20,7 +20,11 @@ const geoDocument = v.object({
   filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
 });
 
-function s2Cells(s2: S2Bindings, point: Point, maxResolution: number): string[] {  
+function s2Cells(
+  s2: S2Bindings,
+  point: Point,
+  maxResolution: number,
+): string[] {
   const leafCellID = s2.cellIDFromPoint(point);
   const cells = [];
   for (let i = 0; i <= maxResolution; i++) {
@@ -35,7 +39,7 @@ export const insert = mutation({
     document: geoDocument,
     maxResolution: v.number(),
   },
-  handler: async (ctx, args) => {    
+  handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
 
     await remove(ctx, {
@@ -106,9 +110,7 @@ export const remove = mutation({
     for (const cell of cells) {
       const existingCell = await ctx.db
         .query("pointsByCell")
-        .withIndex("cell", (q) =>
-          q.eq("cell", cell).eq("tupleKey", tupleKey),
-        )
+        .withIndex("cell", (q) => q.eq("cell", cell).eq("tupleKey", tupleKey))
         .unique();
       if (!existingCell) {
         throw new Error(

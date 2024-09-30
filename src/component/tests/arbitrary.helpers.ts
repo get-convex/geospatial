@@ -20,4 +20,4 @@ export const arbitraryDocuments = fc.array(arbitraryDocument, {
   maxLength: 4,
 });
 
-export const arbitraryResolution = fc.integer({ min: 0, max: 14 });
+export const arbitraryResolution = fc.integer({ min: 1, max: 30 });

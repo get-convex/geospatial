@@ -20,7 +20,7 @@ import {
 } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc } from "../convex/_generated/dataModel";
-import type  { Point } from "../../src/client";
+import type { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
@@ -128,7 +128,7 @@ function LocationSearch(props: {
     maxResolution: 20,
   });
 
-  const stickyH3Cells = useRef<{ token: string, vertices: Point[] }[]>([]);
+  const stickyH3Cells = useRef<{ token: string; vertices: Point[] }[]>([]);
   if (h3Cells !== undefined) {
     stickyH3Cells.current = h3Cells;
   }
@@ -139,12 +139,12 @@ function LocationSearch(props: {
   }
 
   const tilingPolygons: { polygon: LatLngExpression[]; cell: string }[] = [];
-  for (const {token, vertices} of stickyH3Cells.current) {    
-    const leafletPolygon = vertices.map((p) => {      
+  for (const { token, vertices } of stickyH3Cells.current) {
+    const leafletPolygon = vertices.map((p) => {
       return [p.latitude, p.longitude] as LatLngTuple;
     });
-    tilingPolygons.push({ polygon: leafletPolygon, cell: token });    
-  }  
+    tilingPolygons.push({ polygon: leafletPolygon, cell: token });
+  }
 
   return (
     <>

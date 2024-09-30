@@ -42,12 +42,14 @@ export const debugH3Cells = query({
     rectangle,
     maxResolution: v.number(),
   },
-  returns: v.array(v.object({
-    token: v.string(),
-    vertices: v.array(point),
-  })),
+  returns: v.array(
+    v.object({
+      token: v.string(),
+      vertices: v.array(point),
+    }),
+  ),
   handler: async (ctx, args) => {
-    console.time('debugH3Cells')
+    console.time("debugH3Cells");
     const s2 = await S2Bindings.load();
     const cells = s2.coverRectangle(args.rectangle, args.maxResolution);
     const result = cells.map((cell) => {
@@ -55,7 +57,7 @@ export const debugH3Cells = query({
       const vertices = s2.cellVertexes(cell);
       return { token, vertices };
     });
-    console.timeEnd('debugH3Cells')
+    console.timeEnd("debugH3Cells");
     return result;
   },
 });
@@ -95,8 +97,10 @@ export const execute = query({
       }
     }
     const { rectangle } = args.query;
-    const cells = s2.coverRectangle(rectangle, args.maxResolution).map((cellID) => s2.cellIDToken(cellID));        
-    
+    const cells = s2
+      .coverRectangle(rectangle, args.maxResolution)
+      .map((cellID) => s2.cellIDToken(cellID));
+
     const stats: Stats = {
       cells: cells.length,
       queriesIssued: 0,
@@ -197,7 +201,7 @@ export const execute = query({
           if (!contains) {
             stats.rowsPostFiltered++;
             continue;
-          }          
+          }
           results.push({
             key: doc.key,
             coordinates: doc.coordinates,

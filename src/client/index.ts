@@ -178,7 +178,7 @@ export class GeospatialIndex<
     ctx: QueryCtx,
     rectangle: Rectangle,
     maxResolution: number,
-  ): Promise<{ token: string, vertices: Point[] }[]> {
+  ): Promise<{ token: string; vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugH3Cells, {
       rectangle,
       maxResolution,

@@ -22,7 +22,7 @@ export const execute = query({
         coordinates: point,
       }),
     ),
-    nextCursor: v.optional(v.string()),  
+    nextCursor: v.optional(v.string()),
   }),
   async handler(ctx, args) {
     const mustFilterConditions = args.mustFilter.map((emoji) => ({
@@ -59,22 +59,20 @@ export const execute = query({
       }
       const coordinates = coordinatesByKey.get(row._id)!;
       rows.push({ coordinates, ...row });
-    }    
+    }
     return {
-      rows,      
+      rows,
       nextCursor,
     };
   },
 });
 
-
-
 export const h3Cells = query({
   args: {
     rectangle,
     maxResolution: v.number(),
-  },  
-  handler: async (ctx, args) => {        
+  },
+  handler: async (ctx, args) => {
     return await geospatial.debugH3Cells(
       ctx,
       args.rectangle,
