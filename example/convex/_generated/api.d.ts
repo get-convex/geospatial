@@ -12,7 +12,7 @@
 
 import type * as addPoint from "../addPoint.js";
 import type * as constants from "../constants.js";
-import type * as index from "../index.js";
+import type * as example from "../example.js";
 import type * as search from "../search.js";
 
 import type {
@@ -31,7 +31,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   addPoint: typeof addPoint;
   constants: typeof constants;
-  index: typeof index;
+  example: typeof example;
   search: typeof search;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

@@ -1,9 +1,8 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { Point, point } from "../../src/client";
-import { geospatial } from ".";
+import { Point, point, rectangle } from "@convex-dev/geospatial";
+import { geospatial } from "./example";
 import { Id } from "./_generated/dataModel";
-import { rectangle } from "../../src/component/types";
 
 export const execute = query({
   args: {

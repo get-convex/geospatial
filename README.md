@@ -13,21 +13,21 @@ app up to about 300,000 points, so reach out if you're using a much larger datas
 
 ## Installation
 
-First, add `@convex-dev/geospatial-index` to your Convex project:
+First, add `@convex-dev/geospatial` to your Convex project:
 
 ```bash
-npm install @convex-dev/geospatial-index
+npm install @convex-dev/geospatial
 ```
 
 Then, install the component into your Convex project within the `convex/convex.config.ts` file:
 
 ```ts
 // convex/convex.config.ts
-import geospatialIndex from "@convex-dev/geospatial-index/component";
+import geospatial from "@convex-dev/geospatial/convex.config.js";
 import { defineApp } from "convex/server";
 
 const app = defineApp();
-app.use(geospatialIndex);
+app.use(geospatial);
 export default app;
 ```
 
@@ -35,10 +35,10 @@ Finally, create a new `GeospatialIndex` within your `convex/` folder, and point 
 
 ```ts
 // convex/index.ts
-import { GeospatialIndex } from "@convex-dev/geospatial-index/client";
-import { components } from "./_generated/server";
+import { GeospatialIndex } from "@convex-dev/geospatial";
+import { components } from "./_generated/api";
 
-const geospatialIndex = new GeospatialIndex(components.geospatialIndex);
+const geospatial = new GeospatialIndex(components.geospatial);
 ```
 
 ## Inserting points
@@ -61,8 +61,8 @@ const example = mutation(async (ctx) => {
     { filterExample: "hi" },
     10.17,
   );
-  const result = await geospatialIndex.get(ctx, "example");
-  await geospatialIndex.remove(ctx, "example");
+  const result = await geospatial.get(ctx, "example");
+  await geospatial.remove(ctx, "example");
 });
 ```
 
@@ -71,95 +71,104 @@ will also provide you with auto-complete for the `filterKeys` and `sortKey` para
 
 ```ts
 // convex/index.ts
-import { GeospatialIndex } from "@convex-dev/geospatial-index/client";
-import { components } from "./_generated/server";
-import type { Point, Primitive, Rectangle } from "../component/types.js";
+import { GeospatialIndex, Point } from "@convex-dev/geospatial";
+import { components } from "./_generated/api";
 
 type MyDocument = {
-  key: "some" | "string" | "subtype";
+  key: "some" | "strings";
   coordinates: Point;
   filterKeys: { filterExample: string; anotherExample?: number };
   sortKey: number;
 };
 
-const geospatialIndex = new GeospatialIndex<MyDocument>(
-  components.geospatialIndex,
-);
+const geospatial = new GeospatialIndex<MyDocument>(components.geospatial);
 ```
 
 ## Querying points
 
-After inserting some points, you can query them with the `queryRectangle` API. Pass in the four corners of
-a given rectangle, and the API will return a list of points within that region:
+After inserting some points, you can query them with the `query` API.
 
 ```ts
 // convex/index.ts
 
 const example = query(async (ctx) => {
   const rectangle = {
-    sw: { latitude: 40.7831, longitude: -73.9712 },
-    nw: { latitude: 40.7831, longitude: -72.9712 },
-    ne: { latitude: 41.7831, longitude: -72.9712 },
-    se: { latitude: 41.7831, longitude: -73.9712 },
+    west: -73.9712,
+    south: 40.7831,
+    east: -72.9712,
+    north: 41.7831,
   };
-  const result = await geospatialIndex.queryRectangle(ctx, rectangle);
+  const result = await geospatial.query(ctx, {
+    shape: { type: "rectangle", rectangle },
+    limit: 16,
+  });
   return result;
 });
 ```
 
-You can optionally add filter conditions to queries. There are two types of filters you can apply:
+This query will find all points that lie within the query rectangle, sort them in ascending
+`sortKey` order, and return at most 16 results.
 
-1. "should" filters: At least one of all of the "should" filter conditions must apply.
-2. "must" filters: All of the "must" filter conditions must apply.
+You can optionally add filter conditions to queries.
+
+The first type of filter condition is an `in()` filter, which requires that a matching
+document have a filter field with a value in a specified set.
 
 ```ts
 // convex/index.ts
 
 const example = query(async (ctx) => {
   const rectangle = {
-    sw: { latitude: 40.7831, longitude: -73.9712 },
-    nw: { latitude: 40.7831, longitude: -72.9712 },
-    ne: { latitude: 41.7831, longitude: -72.9712 },
-    se: { latitude: 41.7831, longitude: -73.9712 },
+    west: -73.9712,
+    south: 40.7831,
+    east: -72.9712,
+    north: 41.7831,
   };
-  const result = await geospatialIndex.queryRectangle(ctx, rectangle, [
-    { filterKey: "filterExample", filterValue: "hi", occur: "should" },
-    { filterKey: "anotherExample", filterValue: 10, occur: "must" },
-  ]);
+  const result = await geospatialIndex.query(ctx, {
+    shape: { type: "rectangle", rectangle },
+    filter: (q) => q.in("filterExample", ["hi", "bye"]),
+  });
   return result;
 });
 ```
 
-Queries can also specify a range over the sorting key. We currently only support (optional) inclusive lower bounds
-and exclusive upper bounds.
+The second type of filter condition is an `eq()` filter, which requires that a matching
+document have a filter field with a value equal to a specified value.
+
+```ts
+// convex/index.ts
+
+const example = query(async (ctx) => {
+  const result = await geospatialIndex.query(ctx, {
+    shape: { type: "rectangle", rectangle },
+    filter: (q) => q.eq("filterExample", "hi"),
+  });
+  return result;
+});
+```
+
+The final type of filter condition allows you to specify ranges over the `sortKey`. We currently only support (optional) inclusive lower bounds and exclusive upper bounds.
 
 ```ts
 // convex/index.ts
 
 const example = query(async (ctx) => {
   const rectangle = {
-    sw: { latitude: 40.7831, longitude: -73.9712 },
-    nw: { latitude: 40.7831, longitude: -72.9712 },
-    ne: { latitude: 41.7831, longitude: -72.9712 },
-    se: { latitude: 41.7831, longitude: -73.9712 },
+    west: -73.9712,
+    south: 40.7831,
+    east: -72.9712,
+    north: 41.7831,
   };
-  const result = await geospatialIndex.queryRectangle(
-    ctx,
-    rectangle,
-    [],
-    { startInclusive: 10, endExclusive: 20 },
-    undefined,
-    64,
-  );
+  const result = await geospatialIndex.query(ctx, {
+    shape: { type: "rectangle", rectangle },
+    filter: (q) => q.gte("sortKey", 10).lt("sortKey", 20),
+  });
   return result;
 });
 ```
 
-Queries take in a `maxRows` parameter, which limits the maximum number of rows returned. If this limit is hit,
-the query will return a `nextCursor` for continuation.
-
-The query may also return a `nextCursor` with fewer than `maxRows` results if it runs out of its IO budget
-while executing.
+Queries take in a `limit`, which bounds the maximum number of rows returned. If this limit is hit,
+the query will return a `nextCursor` for continuation. The query may also return a `nextCursor` with fewer than `limit` results if it runs out of its IO budget while executing.
 
 In either case, you can continue the stream by passing `nextCursor` to the next call's `cursor` parameter.
 
@@ -168,29 +177,29 @@ In either case, you can continue the stream by passing `nextCursor` to the next 
 
 const example = query(async (ctx) => {
   const rectangle = {
-    sw: { latitude: 40.7831, longitude: -73.9712 },
-    nw: { latitude: 40.7831, longitude: -72.9712 },
-    ne: { latitude: 41.7831, longitude: -72.9712 },
-    se: { latitude: 41.7831, longitude: -73.9712 },
+    west: -73.9712,
+    south: 40.7831,
+    east: -72.9712,
+    north: 41.7831,
   };
   const startCursor = undefined;
-  const result = await geospatialIndex.queryRectangle(
+  const result = await geospatialIndex.query(
     ctx,
-    rectangle,
-    [],
-    { startInclusive: 10, endExclusive: 20 },
+    {
+      shape: { type: "rectangle", rectangle },
+      limit: 16,
+    },
     startCursor,
-    64,
   );
   if (result.nextCursor) {
     // Continue the query, starting from the first query's cursor.
-    const nextResult = await geospatialIndex.queryRectangle(
+    const nextResult = await geospatialIndex.query(
       ctx,
-      rectangle,
-      [],
-      { startInclusive: 10, endExclusive: 20 },
+      {
+        shape: { type: "rectangle", rectangle },
+        limit: 16,
+      },
       result.nextCursor,
-      64,
     );
   }
   return result;

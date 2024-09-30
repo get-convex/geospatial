@@ -5,16 +5,16 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:backend dev:frontend",
     "dev-no-ts": "npm-run-all --parallel dev:backend-no-ts dev:frontend",
-    "dev:backend": "convex dev",
-    "dev:backend-no-ts": "convex dev --typecheck=disable",
+    "dev:backend": "convex dev --live-component-sources",
+    "dev:backend-no-ts": "convex dev --live-component-sources --typecheck=disable",
     "dev:frontend": "vite --open --clearScreen false",
-    "predev": "convex dev --until-success",
     "logs": "convex logs",
     "lint": "tsc -p convex && eslint convex"
   },
   "dependencies": {
     "antd": "^5.13.3",
     "convex": "1.16.2",
+    "@convex-dev/geospatial": "file:..",
     "d3-array": "^3.2.4",
     "h3-js": "^4.1.0",
     "leaflet": "^1.9.4",

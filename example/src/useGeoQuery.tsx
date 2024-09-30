@@ -1,6 +1,6 @@
 import { useQueries } from "convex/react";
 import { useState, useMemo, useEffect } from "react";
-import { Rectangle } from "../../src/component/types";
+import { Rectangle } from "@convex-dev/geospatial";
 import { api } from "../convex/_generated/api";
 
 export function useGeoQuery(

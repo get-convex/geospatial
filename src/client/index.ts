@@ -7,12 +7,12 @@ import {
 import { GenericId } from "convex/values";
 import type { api } from "../component/_generated/api.js";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
-import { point } from "../component/types.js";
+import { point, rectangle } from "../component/types.js";
 import { LogLevel } from "../component/lib/logging.js";
 import { FilterBuilderImpl, GeospatialQuery } from "./query.js";
 
-export type { Point, Primitive, GeospatialQuery };
-export { point };
+export type { Point, Primitive, GeospatialQuery, Rectangle };
+export { point, rectangle };
 
 declare global {
   const Convex: Record<string, unknown>;
