@@ -98,6 +98,7 @@ export const execute = query({
     const cells = s2
       .coverRectangle(rectangle, args.maxResolution)
       .map((cellID) => s2.cellIDToken(cellID));
+    logger.debug("S2 cells", args.query, args.maxResolution, cells);
 
     const stats: Stats = {
       cells: cells.length,
