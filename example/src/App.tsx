@@ -206,10 +206,9 @@ function App() {
     <>
       <h1>Convex Geospatial Demo</h1>
       Right click on the map to put down a random emoji! The blue polygons
-      visualize the current H3 index cells. You can also filter the results by a
-      single emoji (a "must" filter that's a required condition) or a set of
-      emojis (a "should" filter that requires at least one of the emojis to
-      match).
+      visualize the current S2 index cells. You can also filter the results by a
+      single emoji (an AND of an equality condition) or a set of
+      emojis (an AND of an IN condition).
       <div
         style={{
           marginBottom: "10px",
