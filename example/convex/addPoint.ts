@@ -23,8 +23,8 @@ export const addBatch = internalMutation({
       const id = await ctx.db.insert("locations", {
         name,
       });
-      const latitudeRange = [39, 41];
-      const longitudeRange = [-75, -73];
+      const latitudeRange = [30, 50];
+      const longitudeRange = [-85, -65];
       const latitude =
         Math.random() * (latitudeRange[1] - latitudeRange[0]) +
         latitudeRange[0];

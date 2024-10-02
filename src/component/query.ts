@@ -42,6 +42,7 @@ export const debugCells = query({
     rectangle,
     minLevel: v.number(),
     maxLevel: v.number(),
+    levelMod: v.number(),
     maxCells: v.number(),
   },
   returns: v.array(
@@ -56,6 +57,7 @@ export const debugCells = query({
       args.rectangle,
       args.minLevel,
       args.maxLevel,
+      args.levelMod,
       args.maxCells,
     );
     const result = cells.map((cell) => {
@@ -79,6 +81,7 @@ export const execute = query({
     cursor: v.optional(v.string()),
     minLevel: v.number(),
     maxLevel: v.number(),
+    levelMod: v.number(),
     maxCells: v.number(),
     logLevel,
   },
@@ -105,7 +108,13 @@ export const execute = query({
     }
     const { rectangle } = args.query;
     const cells = s2
-      .coverRectangle(rectangle, args.minLevel, args.maxLevel, args.maxCells)
+      .coverRectangle(
+        rectangle,
+        args.minLevel,
+        args.maxLevel,
+        args.levelMod,
+        args.maxCells,
+      )
       .map((cellID) => s2.cellIDToken(cellID));
     logger.debug("S2 cells", args, cells);
 

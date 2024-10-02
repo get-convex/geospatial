@@ -1,5 +1,5 @@
 import { QueryCtx } from "../_generated/server.js";
-import { get } from "../counter.js";
+import * as approximateCounter from "../lib/approximateCounter.js";
 import { Interval } from "../lib/interval.js";
 import { Logger } from "../lib/logging.js";
 import { TupleKey, encodeBound } from "../lib/tupleKey.js";
@@ -97,7 +97,10 @@ export abstract class DatabaseRange implements PointSet {
   }
 
   async sizeHint(): Promise<number> {
-    const count = await get(this.ctx, this.getCounterKey());
+    const count = await approximateCounter.estimateCount(
+      this.ctx,
+      this.getCounterKey(),
+    );
     this.logger.debug(`Size hint for ${this.getCounterKey()} is ${count}`);
     return count;
   }

@@ -85,6 +85,7 @@ export declare const components: {
             key: string;
             sortKey: number;
           };
+          levelMod: number;
           maxCells: number;
           maxLevel: number;
           minLevel: number;
@@ -94,7 +95,13 @@ export declare const components: {
       remove: FunctionReference<
         "mutation",
         "internal",
-        { key: string; maxCells: number; maxLevel: number; minLevel: number },
+        {
+          key: string;
+          levelMod: number;
+          maxCells: number;
+          maxLevel: number;
+          minLevel: number;
+        },
         boolean
       >;
     };
@@ -103,6 +110,7 @@ export declare const components: {
         "query",
         "internal",
         {
+          levelMod: number;
           maxCells: number;
           maxLevel: number;
           minLevel: number;
@@ -123,6 +131,7 @@ export declare const components: {
         "internal",
         {
           cursor?: string;
+          levelMod: number;
           logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
           maxCells: number;
           maxLevel: number;

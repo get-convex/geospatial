@@ -26,7 +26,7 @@ if (typeof Convex === "undefined") {
 export const DEFAULT_MIN_LEVEL = 4;
 export const DEFAULT_MAX_LEVEL = 16;
 export const DEFAULT_MAX_CELLS = 8;
-
+export const DEFAULT_LEVEL_MOD = 2;
 export type GeospatialDocument = {
   key: string;
   coordinates: Point;
@@ -44,6 +44,10 @@ export interface GeospatialIndexOptions {
    */
   maxLevel?: number;
   /**
+   * The distance between levels when indexing, implying a branching factor of `4^levelMod`. Defaults to 2.
+   */
+  levelMod?: number;
+  /**
    * The maximum number of cells to use when querying. Defaults to 8.
    */
   maxCells?: number;
@@ -60,6 +64,7 @@ export class GeospatialIndex<
 
   minLevel: number;
   maxLevel: number;
+  levelMod: number;
   maxCells: number;
 
   /**
@@ -89,6 +94,7 @@ export class GeospatialIndex<
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
     this.minLevel = options?.minLevel ?? DEFAULT_MIN_LEVEL;
     this.maxLevel = options?.maxLevel ?? DEFAULT_MAX_LEVEL;
+    this.levelMod = options?.levelMod ?? DEFAULT_LEVEL_MOD;
     this.maxCells = options?.maxCells ?? DEFAULT_MAX_CELLS;
   }
 
@@ -117,6 +123,7 @@ export class GeospatialIndex<
       },
       minLevel: this.minLevel,
       maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
       maxCells: this.maxCells,
     });
   }
@@ -145,6 +152,7 @@ export class GeospatialIndex<
       key,
       minLevel: this.minLevel,
       maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
       maxCells: this.maxCells,
     });
   }
@@ -179,6 +187,7 @@ export class GeospatialIndex<
       cursor,
       minLevel: this.minLevel,
       maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
       maxCells: this.maxCells,
       logLevel: this.logLevel,
     });
@@ -202,6 +211,7 @@ export class GeospatialIndex<
       rectangle,
       minLevel: this.minLevel,
       maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
       maxCells: this.maxCells,
     });
     return resp as any;

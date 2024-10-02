@@ -7,10 +7,9 @@ import {
 } from "./_generated/server.js";
 import { Point, point, primitive } from "./types.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
-import { increment } from "./counter.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
 import { cellCounterKey } from "./streams/cellRange.js";
-import { internal } from "./_generated/api.js";
+import * as approximateCounter from "./lib/approximateCounter.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
 
 const geoDocument = v.object({
@@ -26,12 +25,13 @@ function s2Cells(
   opts: {
     minLevel: number;
     maxLevel: number;
+    levelMod: number;
     maxCells: number;
   },
 ): string[] {
   const leafCellID = s2.cellIDFromPoint(point);
   const cells = [];
-  for (let i = opts.minLevel; i <= opts.maxLevel; i++) {
+  for (let i = opts.minLevel; i <= opts.maxLevel; i += opts.levelMod) {
     const parentCellID = s2.cellIDParent(leafCellID, i);
     cells.push(s2.cellIDToken(parentCellID));
   }
@@ -44,6 +44,7 @@ export const insert = mutation({
 
     minLevel: v.number(),
     maxLevel: v.number(),
+    levelMod: v.number(),
     maxCells: v.number(),
   },
   handler: async (ctx, args) => {
@@ -53,6 +54,7 @@ export const insert = mutation({
       key: args.document.key,
       minLevel: args.minLevel,
       maxLevel: args.maxLevel,
+      levelMod: args.levelMod,
       maxCells: args.maxCells,
     });
     const pointId = await ctx.db.insert("points", args.document as any);
@@ -61,7 +63,7 @@ export const insert = mutation({
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
     for (const cell of cells) {
       await ctx.db.insert("pointsByCell", { cell, tupleKey });
-      await increment(ctx, cellCounterKey(cell), 1);
+      await approximateCounter.increment(ctx, pointId, cellCounterKey(cell));
     }
     for (const [filterKey, filterDoc] of Object.entries(
       args.document.filterKeys,
@@ -73,7 +75,11 @@ export const insert = mutation({
           filterValue,
           tupleKey,
         });
-        await increment(ctx, filterCounterKey(filterKey, filterValue), 1);
+        await approximateCounter.increment(
+          ctx,
+          pointId,
+          filterCounterKey(filterKey, filterValue),
+        );
       }
     }
   },
@@ -102,6 +108,7 @@ export const remove = mutation({
     key: v.string(),
     minLevel: v.number(),
     maxLevel: v.number(),
+    levelMod: v.number(),
     maxCells: v.number(),
   },
   returns: v.boolean(),
@@ -129,7 +136,11 @@ export const remove = mutation({
         );
       }
       await ctx.db.delete(existingCell._id);
-      await increment(ctx, cellCounterKey(cell), -1);
+      await approximateCounter.decrement(
+        ctx,
+        existing._id,
+        cellCounterKey(cell),
+      );
     }
     for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
       const valueArray = filterDoc instanceof Array ? filterDoc : [filterDoc];
@@ -149,7 +160,11 @@ export const remove = mutation({
           );
         }
         await ctx.db.delete(existingFilterKey._id);
-        await increment(ctx, filterCounterKey(filterKey, filterValue), -1);
+        await approximateCounter.decrement(
+          ctx,
+          existing._id,
+          filterCounterKey(filterKey, filterValue),
+        );
       }
     }
     await ctx.db.delete(existing._id);

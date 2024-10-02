@@ -4,10 +4,13 @@ import { api } from "../_generated/api.js";
 import schema from "../schema.js";
 import { modules } from "../test.setup.js";
 import { test as fcTest } from "@fast-check/vitest";
-import {
-  arbitraryDocuments,
-  arbitraryResolution,
-} from "./arbitrary.helpers.js";
+import { arbitraryDocuments } from "./arbitrary.helpers.js";
+
+const opts = {
+  minLevel: 4,
+  maxLevel: 16,
+  maxCells: 8,
+};
 
 test("CRUD operations", async () => {
   const t = convexTest(schema, modules);
@@ -19,7 +22,7 @@ test("CRUD operations", async () => {
   };
   await t.mutation(api.document.insert, {
     document,
-    maxResolution: 10,
+    ...opts,
   });
   const result = await t.query(api.document.get, { key: "test" });
   expect(result).toEqual(document);
@@ -32,14 +35,14 @@ test("CRUD operations", async () => {
   };
   await t.mutation(api.document.insert, {
     document: newDocument,
-    maxResolution: 10,
+    ...opts,
   });
   const result2 = await t.query(api.document.get, { key: "test" });
   expect(result2).toEqual(newDocument);
 
   await t.mutation(api.document.remove, {
     key: "test",
-    maxResolution: 10,
+    ...opts,
   });
   const result3 = await t.query(api.document.get, { key: "test" });
   expect(result3).toEqual(null);
@@ -53,9 +56,9 @@ test("CRUD operations", async () => {
   });
 });
 
-fcTest.prop({ documents: arbitraryDocuments, resolution: arbitraryResolution })(
+fcTest.prop({ documents: arbitraryDocuments })(
   "insert and delete",
-  async ({ documents, resolution }) => {
+  async ({ documents }) => {
     const t = convexTest(schema, modules);
 
     const documentsByKey = new Map<string, any>();
@@ -63,7 +66,7 @@ fcTest.prop({ documents: arbitraryDocuments, resolution: arbitraryResolution })(
     for (const document of documents) {
       await t.mutation(api.document.insert, {
         document,
-        maxResolution: resolution,
+        ...opts,
       });
       const result = await t.query(api.document.get, { key: document.key });
       expect(result).toEqual(document);
@@ -76,7 +79,7 @@ fcTest.prop({ documents: arbitraryDocuments, resolution: arbitraryResolution })(
 
       await t.mutation(api.document.remove, {
         key,
-        maxResolution: resolution,
+        ...opts,
       });
       const result2 = await t.query(api.document.get, { key });
       expect(result2).toEqual(null);

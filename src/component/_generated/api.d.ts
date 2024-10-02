@@ -10,8 +10,8 @@
  * @module
  */
 
-import type * as counter from "../counter.js";
 import type * as document from "../document.js";
+import type * as lib_approximateCounter from "../lib/approximateCounter.js";
 import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_goRuntime from "../lib/goRuntime.js";
 import type * as lib_interval from "../lib/interval.js";
@@ -20,6 +20,7 @@ import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_s2Bindings from "../lib/s2Bindings.js";
 import type * as lib_s2wasm from "../lib/s2wasm.js";
 import type * as lib_tupleKey from "../lib/tupleKey.js";
+import type * as lib_xxhash from "../lib/xxhash.js";
 import type * as query from "../query.js";
 import type * as streams_cellRange from "../streams/cellRange.js";
 import type * as streams_databaseRange from "../streams/databaseRange.js";
@@ -43,8 +44,8 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  counter: typeof counter;
   document: typeof document;
+  "lib/approximateCounter": typeof lib_approximateCounter;
   "lib/d64": typeof lib_d64;
   "lib/goRuntime": typeof lib_goRuntime;
   "lib/interval": typeof lib_interval;
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "lib/s2Bindings": typeof lib_s2Bindings;
   "lib/s2wasm": typeof lib_s2wasm;
   "lib/tupleKey": typeof lib_tupleKey;
+  "lib/xxhash": typeof lib_xxhash;
   query: typeof query;
   "streams/cellRange": typeof streams_cellRange;
   "streams/databaseRange": typeof streams_databaseRange;
@@ -101,6 +103,7 @@ export type Mounts = {
           key: string;
           sortKey: number;
         };
+        levelMod: number;
         maxCells: number;
         maxLevel: number;
         minLevel: number;
@@ -110,7 +113,13 @@ export type Mounts = {
     remove: FunctionReference<
       "mutation",
       "public",
-      { key: string; maxCells: number; maxLevel: number; minLevel: number },
+      {
+        key: string;
+        levelMod: number;
+        maxCells: number;
+        maxLevel: number;
+        minLevel: number;
+      },
       boolean
     >;
   };
@@ -119,6 +128,7 @@ export type Mounts = {
       "query",
       "public",
       {
+        levelMod: number;
         maxCells: number;
         maxLevel: number;
         minLevel: number;
@@ -134,6 +144,7 @@ export type Mounts = {
       "public",
       {
         cursor?: string;
+        levelMod: number;
         logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
         maxCells: number;
         maxLevel: number;

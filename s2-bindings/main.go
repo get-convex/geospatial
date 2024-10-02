@@ -47,13 +47,14 @@ func coverRectangleBufferPtr() *[COVER_RECTANGLE_BUFFER_SIZE]uint64 {
 }
 
 //export coverRectangle
-func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, minLevel int, maxLevel int, maxCells int) int {
+func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, minLevel int, maxLevel int, levelMod int, maxCells int) int {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(latDeg2, lngDeg2))
 	rc := s2.RegionCoverer{
 		MinLevel: minLevel,
 		MaxLevel: maxLevel,
 		MaxCells: maxCells,
+		LevelMod: levelMod,
 	}
 	covering := rc.Covering(s2.Region(rect))
 	if len(covering) > COVER_RECTANGLE_BUFFER_SIZE {

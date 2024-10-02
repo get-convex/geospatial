@@ -55,6 +55,7 @@ export class S2Bindings {
     rectangle: Rectangle,
     minLevel: number,
     maxLevel: number,
+    levelMod: number,
     maxCells: number,
   ): CellID[] {
     const len = this.exports.coverRectangle(
@@ -64,6 +65,7 @@ export class S2Bindings {
       rectangle.east,
       minLevel,
       maxLevel,
+      levelMod,
       maxCells,
     );
     if (len < 0) {
