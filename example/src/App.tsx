@@ -207,8 +207,8 @@ function App() {
       <h1>Convex Geospatial Demo</h1>
       Right click on the map to put down a random emoji! The blue polygons
       visualize the current S2 index cells. You can also filter the results by a
-      single emoji (an AND of an equality condition) or a set of
-      emojis (an AND of an IN condition).
+      single emoji (an AND of an equality condition) or a set of emojis (an AND
+      of an IN condition).
       <div
         style={{
           marginBottom: "10px",

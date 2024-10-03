@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { geospatial } from "./example.js";
 import { point } from "@convex-dev/geospatial";
 import { action, internalMutation, mutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
 
 export default mutation({
@@ -23,8 +23,8 @@ export const addBatch = internalMutation({
       const id = await ctx.db.insert("locations", {
         name,
       });
-      const latitudeRange = [30, 50];
-      const longitudeRange = [-85, -65];
+      const latitudeRange = [10, 60];
+      const longitudeRange = [-100, -10];
       const latitude =
         Math.random() * (latitudeRange[1] - latitudeRange[0]) +
         latitudeRange[0];
@@ -43,11 +43,13 @@ export const addMany = action({
     let ix = 0;
     let added = 0;
     const inProgress: Map<number, Promise<number>> = new Map();
+    const deadline = Date.now() + 60 * 1000;
 
     while (true) {
-      if (added >= args.count) {
+      if (added >= args.count || Date.now() > deadline) {
         if (inProgress.size > 0) {
           await Promise.all(inProgress.values());
+          added += args.batchSize * inProgress.size;
         }
         break;
       }
@@ -64,6 +66,14 @@ export const addMany = action({
           .then(() => index);
         inProgress.set(index, promise);
       }
+    }
+
+    if (added < args.count) {
+      await ctx.scheduler.runAfter(0, api.addPoint.addMany, {
+        count: args.count - added,
+        batchSize: args.batchSize,
+        parallelism: args.parallelism,
+      });
     }
   },
 });
