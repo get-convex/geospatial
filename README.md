@@ -9,7 +9,7 @@ coordinates. Then, after inserting in this store, you can efficiently search for
 Oh, and since it's built on Convex, everything is automatically consistent, reactive, and cached.
 
 This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
-app up to about 300,000 points, so reach out if you're using a much larger dataset.
+app up to about 1,000,000 points, so reach out if you're using a much larger dataset.
 
 ## Installation
 
