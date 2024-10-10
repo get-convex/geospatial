@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "async-channel": "^0.2.0",
-    "convex": "1.16.2",
+    "convex": "1.16.5",
     "heap-js": "^2.5.0"
   },
   "devDependencies": {
