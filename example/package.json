@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "antd": "^5.13.3",
-    "convex": "1.16.5",
+    "convex": "^1.16.5",
     "@convex-dev/geospatial": "file:..",
     "d3-array": "^3.2.4",
     "h3-js": "^4.1.0",
