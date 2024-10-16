@@ -25,11 +25,12 @@ Then, install the component into your Convex project within the `convex/convex.c
 
 ```ts
 // convex/convex.config.ts
-import geospatial from "@convex-dev/geospatial/convex.config.js";
+import geospatial from "@convex-dev/geospatial/convex.config";
 import { defineApp } from "convex/server";
 
 const app = defineApp();
 app.use(geospatial);
+
 export default app;
 ```
 
