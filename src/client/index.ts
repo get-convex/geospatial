@@ -205,12 +205,12 @@ export class GeospatialIndex<
   async debugCells(
     ctx: QueryCtx,
     rectangle: Rectangle,
-    maxResolution: number,
+    maxResolution?: number,
   ): Promise<{ token: string; vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
       minLevel: this.minLevel,
-      maxLevel: this.maxLevel,
+      maxLevel: maxResolution ?? this.maxLevel,
       levelMod: this.levelMod,
       maxCells: this.maxCells,
     });

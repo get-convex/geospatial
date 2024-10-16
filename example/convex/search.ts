@@ -71,7 +71,7 @@ export const execute = query({
 export const debugCells = query({
   args: {
     rectangle,
-    maxResolution: v.number(),
+    maxResolution: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await geospatial.debugCells(ctx, args.rectangle, args.maxResolution);
