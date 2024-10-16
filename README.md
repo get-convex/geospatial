@@ -98,18 +98,20 @@ After inserting some points, you can query them with the `query` API.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatial.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    limit: 16,
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatial.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      limit: 16,
+    });
+    return result;
+  },
 });
 ```
 
@@ -124,18 +126,20 @@ document have a filter field with a value in a specified set.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.in("category", ["museum", "restaurant"]),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.in("category", ["museum", "restaurant"]),
+    });
+    return result;
+  },
 });
 ```
 
@@ -145,12 +149,14 @@ document have a filter field with a value equal to a specified value.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.eq("filterExample", "hi"),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.eq("category", "museum"),
+    });
+    return result;
+  },
 });
 ```
 
@@ -159,18 +165,20 @@ The final type of filter condition allows you to specify ranges over the `sortKe
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.gte("sortKey", 10).lt("sortKey", 20),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.gte("sortKey", 10).lt("sortKey", 30),
+    });
+    return result;
+  },
 });
 ```
 
@@ -182,34 +190,37 @@ In either case, you can continue the stream by passing `nextCursor` to the next 
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const startCursor = undefined;
-  const result = await geospatialIndex.query(
-    ctx,
-    {
-      shape: { type: "rectangle", rectangle },
-      limit: 16,
-    },
-    startCursor,
-  );
-  if (result.nextCursor) {
-    // Continue the query, starting from the first query's cursor.
-    const nextResult = await geospatialIndex.query(
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const startCursor = undefined;
+    const result = await geospatialIndex.query(
       ctx,
       {
         shape: { type: "rectangle", rectangle },
         limit: 16,
       },
-      result.nextCursor,
+      startCursor,
     );
-  }
-  return result;
+    if (result.nextCursor) {
+      // Continue the query, starting from the first query's cursor.
+      const nextResult = await geospatialIndex.query(
+        ctx,
+        {
+          shape: { type: "rectangle", rectangle },
+          limit: 16,
+        },
+        result.nextCursor,
+      );
+      return [...result.results, ...nextResult.results];
+    }
+    return result.results; // { key, coordinates }[]
+  },
 });
 ```
 
