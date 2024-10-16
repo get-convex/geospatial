@@ -133,7 +133,7 @@ const example = query(async (ctx) => {
   };
   const result = await geospatialIndex.query(ctx, {
     shape: { type: "rectangle", rectangle },
-    filter: (q) => q.in("filterExample", ["hi", "bye"]),
+    filter: (q) => q.in("category", ["museum", "restaurant"]),
   });
   return result;
 });
