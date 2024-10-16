@@ -85,14 +85,10 @@ import { GeospatialIndex, Point } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
-type MyDocument = {
-  key: Id<"locations">;
-  coordinates: Point;
-  filterKeys: { filterExample: string; anotherExample?: number };
-  sortKey: number;
-};
-
-const geospatial = new GeospatialIndex<MyDocument>(components.geospatial);
+export const geospatial = new GeospatialIndex<
+  Id<"museums">,
+  { category: string; anotherFilter?: number }
+>(components.geospatial);
 ```
 
 ## Querying points
