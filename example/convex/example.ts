@@ -72,20 +72,15 @@ export const search = query({
       },
       args.cursor,
     );
-    const coordinatesByKey = new Map<string, Point>();
-    const rowFetches = [];
-    for (const result of results) {
-      rowFetches.push(ctx.db.get(result.key));
-      coordinatesByKey.set(result.key, result.coordinates);
-    }
-    const rows = [];
-    for (const row of await Promise.all(rowFetches)) {
-      if (!row) {
-        throw new Error("Invalid locationId");
-      }
-      const coordinates = coordinatesByKey.get(row._id)!;
-      rows.push({ coordinates, ...row });
-    }
+    const rows = await Promise.all(
+      results.map(async (result) => {
+        const row = await ctx.db.get(result.key);
+        if (!row) {
+          throw new Error("Invalid locationId");
+        }
+        return { ...row, coordinates: result.coordinates };
+      }),
+    );
     return {
       rows,
       nextCursor,
