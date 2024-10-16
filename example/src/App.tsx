@@ -42,7 +42,7 @@ function LocationSearch(props: {
   const addPoint = useMutation(api.example.addPoint).withOptimisticUpdate(
     (store, args) => {
       const { point, name } = args;
-      for (const { args, value } of store.getAllQueries(api.search.execute)) {
+      for (const { args, value } of store.getAllQueries(api.example.search)) {
         console.log("optimistic update", point, name, args, value);
         if (!value) {
           continue;
@@ -79,7 +79,7 @@ function LocationSearch(props: {
           ...value,
           rows: [...value.rows, newRow],
         };
-        store.setQuery(api.search.execute, args, newValue);
+        store.setQuery(api.example.search, args, newValue);
       }
     },
   );
@@ -123,7 +123,7 @@ function LocationSearch(props: {
   if (loading !== props.loading) {
     props.setLoading(loading);
   }
-  const cells = useQuery(api.search.debugCells, {
+  const cells = useQuery(api.example.debugCells, {
     rectangle,
     maxResolution: 20,
   });

@@ -12,7 +12,6 @@
 
 import type * as constants from "../constants.js";
 import type * as example from "../example.js";
-import type * as search from "../search.js";
 import type * as seed from "../seed.js";
 
 import type {
@@ -31,7 +30,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   constants: typeof constants;
   example: typeof example;
-  search: typeof search;
   seed: typeof seed;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

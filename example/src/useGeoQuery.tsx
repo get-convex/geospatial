@@ -25,7 +25,7 @@ export function useGeoQuery(
     if (queries[startKey] === undefined) {
       setQueries({
         [startKey]: {
-          query: api.search.execute,
+          query: api.example.search,
           args: {
             rectangle,
             mustFilter,
@@ -56,7 +56,7 @@ export function useGeoQuery(
         setQueries({
           ...queries,
           [key]: {
-            query: api.search.execute,
+            query: api.example.search,
             args: {
               rectangle,
               mustFilter,
