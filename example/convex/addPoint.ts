@@ -45,14 +45,7 @@ export const addMany = action({
     const inProgress: Map<number, Promise<number>> = new Map();
     const deadline = Date.now() + 60 * 1000;
 
-    while (true) {
-      if (added >= args.count || Date.now() > deadline) {
-        if (inProgress.size > 0) {
-          await Promise.all(inProgress.values());
-          added += args.batchSize * inProgress.size;
-        }
-        break;
-      }
+    while (added < args.count && Date.now() < deadline) {
       if (inProgress.size >= args.parallelism) {
         const index = await Promise.race(inProgress.values());
         inProgress.delete(index);
@@ -66,6 +59,10 @@ export const addMany = action({
           .then(() => index);
         inProgress.set(index, promise);
       }
+    }
+    if (inProgress.size > 0) {
+      await Promise.all(inProgress.values());
+      added += args.batchSize * inProgress.size;
     }
 
     if (added < args.count) {
