@@ -19,7 +19,7 @@ import {
   LatLngTuple,
 } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
-import { Doc } from "../convex/_generated/dataModel";
+import { Doc, Id } from "../convex/_generated/dataModel";
 import type { Point } from "../../src/client";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
@@ -69,7 +69,7 @@ function LocationSearch(props: {
           continue;
         }
         const newRow = {
-          _id: JSON.stringify(point) as any,
+          _id: JSON.stringify(point) as Id<"locations">,
           _creationTime: 0,
           name,
           coordinates: point,
@@ -101,7 +101,7 @@ function LocationSearch(props: {
       addPoint({
         point: { latitude: latLng.lat, longitude: latLng.lng },
         name,
-      });
+      }).catch(console.error);
     },
   });
   const rectangle = useMemo(() => {
