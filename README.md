@@ -59,7 +59,7 @@ currently only support ascending order on the `sortKey`.
 const example = mutation({
   handler: async (ctx) => {
     const cityId = await ctx.db.insert("cities", {...});
-    await geospatialIndex.insert(
+    await geospatial.insert(
       ctx,
       "American Museum of Natural History",
       {
@@ -134,7 +134,7 @@ const example = query({
       east: -72.9712,
       north: 41.7831,
     };
-    const result = await geospatialIndex.query(ctx, {
+    const result = await geospatial.query(ctx, {
       shape: { type: "rectangle", rectangle },
       filter: (q) => q.in("category", ["museum", "restaurant"]),
     });
@@ -151,7 +151,7 @@ document have a filter field with a value equal to a specified value.
 
 const example = query({
   handler: async (ctx) => {
-    const result = await geospatialIndex.query(ctx, {
+    const result = await geospatial.query(ctx, {
       shape: { type: "rectangle", rectangle },
       filter: (q) => q.eq("category", "museum"),
     });
@@ -173,7 +173,7 @@ const example = query({
       east: -72.9712,
       north: 41.7831,
     };
-    const result = await geospatialIndex.query(ctx, {
+    const result = await geospatial.query(ctx, {
       shape: { type: "rectangle", rectangle },
       filter: (q) => q.gte("sortKey", 10).lt("sortKey", 30),
     });
@@ -199,7 +199,7 @@ const example = query({
       north: 41.7831,
     };
     const startCursor = undefined;
-    const result = await geospatialIndex.query(
+    const result = await geospatial.query(
       ctx,
       {
         shape: { type: "rectangle", rectangle },
@@ -209,7 +209,7 @@ const example = query({
     );
     if (result.nextCursor) {
       // Continue the query, starting from the first query's cursor.
-      const nextResult = await geospatialIndex.query(
+      const nextResult = await geospatial.query(
         ctx,
         {
           shape: { type: "rectangle", rectangle },
