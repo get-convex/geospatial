@@ -88,7 +88,7 @@ export declare const components: {
           maxLevel: number;
           minLevel: number;
         },
-        any
+        null
       >;
       remove: FunctionReference<
         "mutation",

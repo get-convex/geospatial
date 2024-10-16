@@ -20,10 +20,13 @@ import {
 } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
 import { Doc, Id } from "../convex/_generated/dataModel";
-import type { Point } from "../../src/client";
+import type { Point } from "@convex-dev/geospatial";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
+import { FunctionReturnType } from "convex/server";
+
+type Rows = FunctionReturnType<typeof api.example.search>["rows"];
 
 const manhattan = [40.746, -73.985];
 
@@ -133,7 +136,7 @@ function LocationSearch(props: {
     stickyCells.current = cells;
   }
 
-  const stickyRows = useRef<any[]>([]);
+  const stickyRows = useRef<Rows>([]);
   if (rows.length > 0 || loading === false) {
     stickyRows.current = rows;
   }
@@ -222,10 +225,10 @@ function App() {
         <Select
           allowClear
           placeholder="Pick an emoji to require"
-          defaultValue={[]}
+          defaultValue={undefined}
           options={emojiFilterItems}
           style={{ width: "50%" }}
-          onChange={(v: any) => setMustFilter(v ? [v] : [])}
+          onChange={(v: string) => setMustFilter(v ? [v] : [])}
         />
         <Select
           mode="multiple"

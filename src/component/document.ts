@@ -1,10 +1,5 @@
-import { Infer, v } from "convex/values";
-import {
-  internalAction,
-  internalMutation,
-  mutation,
-  query,
-} from "./_generated/server.js";
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server.js";
 import { Point, point, primitive } from "./types.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
@@ -47,6 +42,7 @@ export const insert = mutation({
     levelMod: v.number(),
     maxCells: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
 
@@ -57,7 +53,7 @@ export const insert = mutation({
       levelMod: args.levelMod,
       maxCells: args.maxCells,
     });
-    const pointId = await ctx.db.insert("points", args.document as any);
+    const pointId = await ctx.db.insert("points", args.document);
 
     const cells = s2Cells(s2, args.document.coordinates, args);
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);

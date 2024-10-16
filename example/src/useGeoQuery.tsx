@@ -1,7 +1,10 @@
-import { useQueries } from "convex/react";
+import { RequestForQueries, useQueries } from "convex/react";
 import { useState, useMemo, useEffect } from "react";
 import { Rectangle } from "@convex-dev/geospatial";
 import { api } from "../convex/_generated/api";
+import { FunctionReturnType } from "convex/server";
+
+type Rows = FunctionReturnType<typeof api.example.search>["rows"];
 
 export function useGeoQuery(
   rectangle: Rectangle,
@@ -9,7 +12,7 @@ export function useGeoQuery(
   shouldFilter: string[],
   maxRows: number,
 ) {
-  const [queries, setQueries] = useState<Record<string, any>>({});
+  const [queries, setQueries] = useState<RequestForQueries>({});
   const argsKey = useMemo(
     () =>
       JSON.stringify({
@@ -82,7 +85,7 @@ export function useGeoQuery(
       totalRows += result.rows.length;
     }
   }, [queries, argsKey, queryResults]);
-  const rows = [];
+  const rows: Rows = [];
   const seen = new Set<string>();
   let loading = false;
   let foundAny = false;
