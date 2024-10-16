@@ -56,32 +56,37 @@ currently only support ascending order on the `sortKey`.
 ```ts
 // convex/index.ts
 
-const example = mutation(async (ctx) => {
-  await geospatialIndex.insert(
-    ctx,
-    "example",
-    {
-      latitude: 40.7831,
-      longitude: -73.9712,
-    },
-    { filterExample: "hi" },
-    10.17,
-  );
-  const result = await geospatial.get(ctx, "example");
-  await geospatial.remove(ctx, "example");
+const example = mutation({
+  handler: async (ctx) => {
+    const cityId = await ctx.db.insert("cities", {...});
+    await geospatialIndex.insert(
+      ctx,
+      "American Museum of Natural History",
+      {
+        latitude: 40.7813,
+        longitude: -73.9737,
+      },
+      { category: "museum" },
+      28.0,
+    );
+    const result = await geospatial.get(ctx, cityId);
+    await geospatial.remove(ctx, cityId);
+  },
 });
 ```
 
 If you would like some more typesafety, you can specify a type argument for the `GeospatialIndex` class. This
 will also provide you with auto-complete for the `filterKeys` and `sortKey` parameters.
+Above the key was "American Museum of Natural History" but most commonly the `key` will be an ID in another table of yours.
 
 ```ts
 // convex/index.ts
 import { GeospatialIndex, Point } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 type MyDocument = {
-  key: "some" | "strings";
+  key: Id<"locations">;
   coordinates: Point;
   filterKeys: { filterExample: string; anotherExample?: number };
   sortKey: number;
@@ -211,6 +216,8 @@ const example = query(async (ctx) => {
   return result;
 });
 ```
+
+**Note: you typically pass the `nextCursor` in from a client that is paginating through results, to avoid loading too much data in a single query.**
 
 ## Example
 
