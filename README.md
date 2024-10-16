@@ -67,7 +67,7 @@ const example = mutation({
         longitude: -73.9737,
       },
       { category: "museum" },
-      28.0,
+      28.0, // Price used as the sort key
     );
     const result = await geospatial.get(ctx, cityId);
     await geospatial.remove(ctx, cityId);
