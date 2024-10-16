@@ -4,6 +4,8 @@
 
 ![image](https://frugal-mandrill-176.convex.cloud/api/storage/8fb21c7f-441c-4ce9-9abb-925c31e9faab)
 
+<!-- START: Include on https://convex.dev/components -->
+
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
 After installing this component, your Convex deployment will have a key value store that maps string keys to geographic
 coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
@@ -12,6 +14,7 @@ Oh, and since it's built on Convex, everything is automatically consistent, reac
 
 This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
 app up to about 1,000,000 points, so reach out if you're using a much larger dataset.
+If you find a bug or have a feature request, you can [file it here](https://github.com/get-convex/geospatial/issues).
 
 ## Installation
 
@@ -211,7 +214,7 @@ const example = query(async (ctx) => {
 
 ## Example
 
-See `example/` for a full example with a [Leaflet](https://leafletjs.com/)-based frontend.
+See [`example/`](./example/) for a full example with a [Leaflet](https://leafletjs.com/)-based frontend.
 
 ## Development
 
@@ -226,6 +229,8 @@ npm run dev
 
 The component definition is in `src/` and reflects what users of the component will install. The example app,
 which is entirely independent, lives in `example/`.
+
+<!-- END: Include on https://convex.dev/components -->
 
 # 🧑‍🏫 What is Convex?
 
