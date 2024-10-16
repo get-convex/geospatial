@@ -27,7 +27,7 @@ interface GeospatialFilterBuilder<Doc extends GeospatialDocument> {
    * @param field The filter field.
    * @param value The value to match against.
    */
-  eq<FieldName extends keyof Doc["filterKeys"]>(
+  eq<FieldName extends keyof Doc["filterKeys"] & string>(
     field: FieldName,
     value: FilterValue<Doc, FieldName>,
   ): GeospatialFilterBuilder<Doc>;
@@ -39,7 +39,7 @@ interface GeospatialFilterBuilder<Doc extends GeospatialDocument> {
    * @param field The filter field.
    * @param values The values to match against.
    */
-  in<FieldName extends keyof Doc["filterKeys"]>(
+  in<FieldName extends keyof Doc["filterKeys"] & string>(
     field: FieldName,
     values: FilterValue<Doc, FieldName>[],
   ): GeospatialFilterBuilderAfterIn<Doc>;
@@ -67,7 +67,7 @@ interface GeospatialFilterBuilderAfterIn<Doc extends GeospatialDocument> {
    * @param field The filter field.
    * @param value The value to match against.
    */
-  eq<FieldName extends keyof Doc["filterKeys"]>(
+  eq<FieldName extends keyof Doc["filterKeys"] & string>(
     field: FieldName,
     value: FilterValue<Doc, FieldName>,
   ): GeospatialFilterBuilderAfterIn<Doc>;
@@ -96,7 +96,7 @@ export class FilterBuilderImpl<Doc extends GeospatialDocument> {
   interval?: { startInclusive?: number; endExclusive?: number };
   inDefined: boolean = false;
 
-  eq<FieldName extends keyof Doc["filterKeys"]>(
+  eq<FieldName extends keyof Doc["filterKeys"] & string>(
     field: FieldName,
     value: FilterValue<Doc, FieldName>,
   ): FilterBuilderImpl<Doc> {
@@ -107,7 +107,7 @@ export class FilterBuilderImpl<Doc extends GeospatialDocument> {
     });
     return this;
   }
-  in<FieldName extends keyof Doc["filterKeys"]>(
+  in<FieldName extends keyof Doc["filterKeys"] & string>(
     field: FieldName,
     values: FilterValue<Doc, FieldName>[],
   ): FilterBuilderImpl<Doc> {

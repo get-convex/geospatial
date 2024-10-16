@@ -180,7 +180,7 @@ export class GeospatialIndex<
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
         rectangle: query.shape.rectangle,
-        filtering: filterBuilder.filterConditions as any,
+        filtering: filterBuilder.filterConditions,
         sorting: { interval: filterBuilder.interval ?? {} },
         maxResults: query.limit ?? 64,
       },
@@ -214,7 +214,7 @@ export class GeospatialIndex<
       levelMod: this.levelMod,
       maxCells: this.maxCells,
     });
-    return resp as any;
+    return resp;
   }
 }
 
@@ -267,11 +267,11 @@ type MutationCtx = {
 } & QueryCtx;
 
 export type FilterObject<Doc extends GeospatialDocument> = {
-  [K in keyof Doc["filterKeys"]]: {
+  [K in keyof Doc["filterKeys"] & string]: {
     filterKey: K;
     filterValue: ExtractArray<Doc["filterKeys"][K]>;
     occur: "should" | "must";
   };
-}[keyof Doc["filterKeys"]];
+}[keyof Doc["filterKeys"] & string];
 
 type ExtractArray<T> = T extends (infer U)[] ? U : T;
