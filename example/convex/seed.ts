@@ -1,19 +1,8 @@
 import { v } from "convex/values";
 import { geospatial } from "./example.js";
-import { point } from "@convex-dev/geospatial";
-import { action, internalMutation, mutation } from "./_generated/server";
+import { action, internalMutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
-
-export default mutation({
-  args: { point, name: v.string() },
-  handler: async (ctx, { point, name }) => {
-    const id = await ctx.db.insert("locations", {
-      name,
-    });
-    await geospatial.insert(ctx, id, point, { name });
-  },
-});
 
 export const addBatch = internalMutation({
   args: { count: v.number() },
@@ -55,7 +44,7 @@ export const addMany = action({
       if (inProgress.size < args.parallelism) {
         const index = ix++;
         const promise = ctx
-          .runMutation(internal.addPoint.addBatch, { count: args.batchSize })
+          .runMutation(internal.seed.addBatch, { count: args.batchSize })
           .then(() => index);
         inProgress.set(index, promise);
       }
@@ -66,7 +55,7 @@ export const addMany = action({
     }
 
     if (added < args.count) {
-      await ctx.scheduler.runAfter(0, api.addPoint.addMany, {
+      await ctx.scheduler.runAfter(0, api.seed.addMany, {
         count: args.count - added,
         batchSize: args.batchSize,
         parallelism: args.parallelism,

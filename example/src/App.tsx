@@ -39,7 +39,7 @@ function LocationSearch(props: {
 }) {
   const map = useMap();
   const [bounds, setBounds] = useState(map.getBounds());
-  const addPoint = useMutation(api.addPoint.default).withOptimisticUpdate(
+  const addPoint = useMutation(api.example.addPoint).withOptimisticUpdate(
     (store, args) => {
       const { point, name } = args;
       for (const { args, value } of store.getAllQueries(api.search.execute)) {
