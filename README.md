@@ -4,6 +4,8 @@
 
 ![image](https://frugal-mandrill-176.convex.cloud/api/storage/8fb21c7f-441c-4ce9-9abb-925c31e9faab)
 
+<!-- START: Include on https://convex.dev/components -->
+
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
 After installing this component, your Convex deployment will have a key value store that maps string keys to geographic
 coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
@@ -12,6 +14,7 @@ Oh, and since it's built on Convex, everything is automatically consistent, reac
 
 This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
 app up to about 1,000,000 points, so reach out if you're using a much larger dataset.
+If you find a bug or have a feature request, you can [file it here](https://github.com/get-convex/geospatial/issues).
 
 ## Installation
 
@@ -25,11 +28,12 @@ Then, install the component into your Convex project within the `convex/convex.c
 
 ```ts
 // convex/convex.config.ts
-import geospatial from "@convex-dev/geospatial/convex.config.js";
+import geospatial from "@convex-dev/geospatial/convex.config";
 import { defineApp } from "convex/server";
 
 const app = defineApp();
 app.use(geospatial);
+
 export default app;
 ```
 
@@ -52,38 +56,39 @@ currently only support ascending order on the `sortKey`.
 ```ts
 // convex/index.ts
 
-const example = mutation(async (ctx) => {
-  await geospatialIndex.insert(
-    ctx,
-    "example",
-    {
-      latitude: 40.7831,
-      longitude: -73.9712,
-    },
-    { filterExample: "hi" },
-    10.17,
-  );
-  const result = await geospatial.get(ctx, "example");
-  await geospatial.remove(ctx, "example");
+const example = mutation({
+  handler: async (ctx) => {
+    const cityId = await ctx.db.insert("cities", {...});
+    await geospatialIndex.insert(
+      ctx,
+      "American Museum of Natural History",
+      {
+        latitude: 40.7813,
+        longitude: -73.9737,
+      },
+      { category: "museum" },
+      28.0, // Price used as the sort key
+    );
+    const result = await geospatial.get(ctx, cityId);
+    await geospatial.remove(ctx, cityId);
+  },
 });
 ```
 
 If you would like some more typesafety, you can specify a type argument for the `GeospatialIndex` class. This
 will also provide you with auto-complete for the `filterKeys` and `sortKey` parameters.
+Above the key was "American Museum of Natural History" but most commonly the `key` will be an ID in another table of yours.
 
 ```ts
 // convex/index.ts
 import { GeospatialIndex, Point } from "@convex-dev/geospatial";
 import { components } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
-type MyDocument = {
-  key: "some" | "strings";
-  coordinates: Point;
-  filterKeys: { filterExample: string; anotherExample?: number };
-  sortKey: number;
-};
-
-const geospatial = new GeospatialIndex<MyDocument>(components.geospatial);
+export const geospatial = new GeospatialIndex<
+  Id<"museums">,
+  { category: string; anotherFilter?: number }
+>(components.geospatial);
 ```
 
 ## Querying points
@@ -93,18 +98,20 @@ After inserting some points, you can query them with the `query` API.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatial.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    limit: 16,
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatial.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      limit: 16,
+    });
+    return result;
+  },
 });
 ```
 
@@ -119,18 +126,20 @@ document have a filter field with a value in a specified set.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.in("filterExample", ["hi", "bye"]),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.in("category", ["museum", "restaurant"]),
+    });
+    return result;
+  },
 });
 ```
 
@@ -140,12 +149,14 @@ document have a filter field with a value equal to a specified value.
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.eq("filterExample", "hi"),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.eq("category", "museum"),
+    });
+    return result;
+  },
 });
 ```
 
@@ -154,18 +165,20 @@ The final type of filter condition allows you to specify ranges over the `sortKe
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const result = await geospatialIndex.query(ctx, {
-    shape: { type: "rectangle", rectangle },
-    filter: (q) => q.gte("sortKey", 10).lt("sortKey", 20),
-  });
-  return result;
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const result = await geospatialIndex.query(ctx, {
+      shape: { type: "rectangle", rectangle },
+      filter: (q) => q.gte("sortKey", 10).lt("sortKey", 30),
+    });
+    return result;
+  },
 });
 ```
 
@@ -177,40 +190,45 @@ In either case, you can continue the stream by passing `nextCursor` to the next 
 ```ts
 // convex/index.ts
 
-const example = query(async (ctx) => {
-  const rectangle = {
-    west: -73.9712,
-    south: 40.7831,
-    east: -72.9712,
-    north: 41.7831,
-  };
-  const startCursor = undefined;
-  const result = await geospatialIndex.query(
-    ctx,
-    {
-      shape: { type: "rectangle", rectangle },
-      limit: 16,
-    },
-    startCursor,
-  );
-  if (result.nextCursor) {
-    // Continue the query, starting from the first query's cursor.
-    const nextResult = await geospatialIndex.query(
+const example = query({
+  handler: async (ctx) => {
+    const rectangle = {
+      west: -73.9712,
+      south: 40.7831,
+      east: -72.9712,
+      north: 41.7831,
+    };
+    const startCursor = undefined;
+    const result = await geospatialIndex.query(
       ctx,
       {
         shape: { type: "rectangle", rectangle },
         limit: 16,
       },
-      result.nextCursor,
+      startCursor,
     );
-  }
-  return result;
+    if (result.nextCursor) {
+      // Continue the query, starting from the first query's cursor.
+      const nextResult = await geospatialIndex.query(
+        ctx,
+        {
+          shape: { type: "rectangle", rectangle },
+          limit: 16,
+        },
+        result.nextCursor,
+      );
+      return [...result.results, ...nextResult.results];
+    }
+    return result.results; // { key, coordinates }[]
+  },
 });
 ```
 
+**Note: you typically pass the `nextCursor` in from a client that is paginating through results, to avoid loading too much data in a single query.**
+
 ## Example
 
-See `example/` for a full example with a [Leaflet](https://leafletjs.com/)-based frontend.
+See [`example/`](./example/) for a full example with a [Leaflet](https://leafletjs.com/)-based frontend.
 
 ## Development
 
@@ -225,6 +243,8 @@ npm run dev
 
 The component definition is in `src/` and reflects what users of the component will install. The example app,
 which is entirely independent, lives in `example/`.
+
+<!-- END: Include on https://convex.dev/components -->
 
 # 🧑‍🏫 What is Convex?
 

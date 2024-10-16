@@ -108,7 +108,7 @@ export type Mounts = {
         maxLevel: number;
         minLevel: number;
       },
-      any
+      null
     >;
     remove: FunctionReference<
       "mutation",

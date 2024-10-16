@@ -10,10 +10,9 @@
  * @module
  */
 
-import type * as addPoint from "../addPoint.js";
 import type * as constants from "../constants.js";
 import type * as example from "../example.js";
-import type * as search from "../search.js";
+import type * as seed from "../seed.js";
 
 import type {
   ApiFromModules,
@@ -29,10 +28,9 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  addPoint: typeof addPoint;
   constants: typeof constants;
   example: typeof example;
-  search: typeof search;
+  seed: typeof seed;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
@@ -90,7 +88,7 @@ export declare const components: {
           maxLevel: number;
           minLevel: number;
         },
-        any
+        null
       >;
       remove: FunctionReference<
         "mutation",

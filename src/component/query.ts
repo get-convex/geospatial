@@ -179,6 +179,7 @@ export const execute = query({
     }>(8);
     const producer = async () => {
       try {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const tupleKey = await stream.current();
           if (tupleKey === null) {

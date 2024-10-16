@@ -27,10 +27,15 @@ export const DEFAULT_MIN_LEVEL = 4;
 export const DEFAULT_MAX_LEVEL = 16;
 export const DEFAULT_MAX_CELLS = 8;
 export const DEFAULT_LEVEL_MOD = 2;
-export type GeospatialDocument = {
-  key: string;
+
+export type GeospatialFilters = Record<string, Primitive | Primitive[]>;
+export type GeospatialDocument<
+  Key extends string = string,
+  Filters extends GeospatialFilters = GeospatialFilters,
+> = {
+  key: Key;
   coordinates: Point;
-  filterKeys: Record<string, Primitive | Primitive[]>;
+  filterKeys: Filters;
   sortKey: number;
 };
 
@@ -58,7 +63,8 @@ export interface GeospatialIndexOptions {
 }
 
 export class GeospatialIndex<
-  Doc extends GeospatialDocument = GeospatialDocument,
+  Key extends string = string,
+  Filters extends GeospatialFilters = GeospatialFilters,
 > {
   logLevel: LogLevel;
 
@@ -109,9 +115,9 @@ export class GeospatialIndex<
    */
   async insert(
     ctx: MutationCtx,
-    key: Doc["key"],
+    key: Key,
     coordinates: Point,
-    filterKeys: Doc["filterKeys"],
+    filterKeys: Filters,
     sortKey?: number,
   ) {
     await ctx.runMutation(this.component.document.insert, {
@@ -135,9 +141,12 @@ export class GeospatialIndex<
    * @param key - The unique string key to retrieve the coordinate for.
    * @returns - The geographic coordinate `{ latitude, longitude }` associated with the key, or `null` if the key is not found.
    */
-  async get(ctx: QueryCtx, key: Doc["key"]): Promise<Doc | null> {
+  async get(
+    ctx: QueryCtx,
+    key: Key,
+  ): Promise<GeospatialDocument<Key, Filters> | null> {
     const result = await ctx.runQuery(this.component.document.get, { key });
-    return result as Doc | null;
+    return result as GeospatialDocument<Key, Filters> | null;
   }
 
   /**
@@ -147,7 +156,7 @@ export class GeospatialIndex<
    * @param key - The unique string key to remove from the index.
    * @returns - `true` if the key was found and removed, `false` otherwise.
    */
-  async remove(ctx: MutationCtx, key: Doc["key"]): Promise<boolean> {
+  async remove(ctx: MutationCtx, key: Key): Promise<boolean> {
     return await ctx.runMutation(this.component.document.remove, {
       key,
       minLevel: this.minLevel,
@@ -167,20 +176,19 @@ export class GeospatialIndex<
    */
   async query(
     ctx: QueryCtx,
-    query: GeospatialQuery<Doc>,
+    query: GeospatialQuery<GeospatialDocument<Key, Filters>>,
     cursor: string | undefined = undefined,
-  ): Promise<{
-    results: { key: Doc["key"]; coordinates: Point }[];
-    nextCursor?: string;
-  }> {
-    const filterBuilder = new FilterBuilderImpl<Doc>();
+  ) {
+    const filterBuilder = new FilterBuilderImpl<
+      GeospatialDocument<Key, Filters>
+    >();
     if (query.filter) {
       query.filter(filterBuilder);
     }
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
         rectangle: query.shape.rectangle,
-        filtering: filterBuilder.filterConditions as any,
+        filtering: filterBuilder.filterConditions,
         sorting: { interval: filterBuilder.interval ?? {} },
         maxResults: query.limit ?? 64,
       },
@@ -191,7 +199,10 @@ export class GeospatialIndex<
       maxCells: this.maxCells,
       logLevel: this.logLevel,
     });
-    return resp;
+    return resp as {
+      results: { key: Key; coordinates: Point }[];
+      nextCursor?: string;
+    };
   }
 
   /**
@@ -205,16 +216,16 @@ export class GeospatialIndex<
   async debugCells(
     ctx: QueryCtx,
     rectangle: Rectangle,
-    maxResolution: number,
+    maxResolution?: number,
   ): Promise<{ token: string; vertices: Point[] }[]> {
     const resp = await ctx.runQuery(this.component.query.debugCells, {
       rectangle,
       minLevel: this.minLevel,
-      maxLevel: this.maxLevel,
+      maxLevel: maxResolution ?? this.maxLevel,
       levelMod: this.levelMod,
       maxCells: this.maxCells,
     });
-    return resp as any;
+    return resp;
   }
 }
 
@@ -267,11 +278,11 @@ type MutationCtx = {
 } & QueryCtx;
 
 export type FilterObject<Doc extends GeospatialDocument> = {
-  [K in keyof Doc["filterKeys"]]: {
+  [K in keyof Doc["filterKeys"] & string]: {
     filterKey: K;
     filterValue: ExtractArray<Doc["filterKeys"][K]>;
     occur: "should" | "must";
   };
-}[keyof Doc["filterKeys"]];
+}[keyof Doc["filterKeys"] & string];
 
 type ExtractArray<T> = T extends (infer U)[] ? U : T;

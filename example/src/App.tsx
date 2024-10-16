@@ -19,11 +19,14 @@ import {
   LatLngTuple,
 } from "leaflet";
 import { useMutation, useQuery } from "convex/react";
-import { Doc } from "../convex/_generated/dataModel";
-import type { Point } from "../../src/client";
+import { Doc, Id } from "../convex/_generated/dataModel";
+import type { Point } from "@convex-dev/geospatial";
 import { Select } from "antd";
 import { FOOD_EMOJIS } from "../convex/constants.js";
 import { useGeoQuery } from "./useGeoQuery.js";
+import { FunctionReturnType } from "convex/server";
+
+type Rows = FunctionReturnType<typeof api.example.search>["rows"];
 
 const manhattan = [40.746, -73.985];
 
@@ -39,10 +42,10 @@ function LocationSearch(props: {
 }) {
   const map = useMap();
   const [bounds, setBounds] = useState(map.getBounds());
-  const addPoint = useMutation(api.addPoint.default).withOptimisticUpdate(
+  const addPoint = useMutation(api.example.addPoint).withOptimisticUpdate(
     (store, args) => {
       const { point, name } = args;
-      for (const { args, value } of store.getAllQueries(api.search.execute)) {
+      for (const { args, value } of store.getAllQueries(api.example.search)) {
         console.log("optimistic update", point, name, args, value);
         if (!value) {
           continue;
@@ -69,7 +72,7 @@ function LocationSearch(props: {
           continue;
         }
         const newRow = {
-          _id: JSON.stringify(point) as any,
+          _id: JSON.stringify(point) as Id<"locations">,
           _creationTime: 0,
           name,
           coordinates: point,
@@ -79,7 +82,7 @@ function LocationSearch(props: {
           ...value,
           rows: [...value.rows, newRow],
         };
-        store.setQuery(api.search.execute, args, newValue);
+        store.setQuery(api.example.search, args, newValue);
       }
     },
   );
@@ -101,7 +104,7 @@ function LocationSearch(props: {
       addPoint({
         point: { latitude: latLng.lat, longitude: latLng.lng },
         name,
-      });
+      }).catch(console.error);
     },
   });
   const rectangle = useMemo(() => {
@@ -123,7 +126,7 @@ function LocationSearch(props: {
   if (loading !== props.loading) {
     props.setLoading(loading);
   }
-  const cells = useQuery(api.search.debugCells, {
+  const cells = useQuery(api.example.debugCells, {
     rectangle,
     maxResolution: 20,
   });
@@ -133,7 +136,7 @@ function LocationSearch(props: {
     stickyCells.current = cells;
   }
 
-  const stickyRows = useRef<any[]>([]);
+  const stickyRows = useRef<Rows>([]);
   if (rows.length > 0 || loading === false) {
     stickyRows.current = rows;
   }
@@ -222,10 +225,10 @@ function App() {
         <Select
           allowClear
           placeholder="Pick an emoji to require"
-          defaultValue={[]}
+          defaultValue={undefined}
           options={emojiFilterItems}
           style={{ width: "50%" }}
-          onChange={(v: any) => setMustFilter(v ? [v] : [])}
+          onChange={(v: string) => setMustFilter(v ? [v] : [])}
         />
         <Select
           mode="multiple"

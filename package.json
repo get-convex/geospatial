@@ -25,6 +25,7 @@
     "build:go": "cd src/s2-bindings && python build.py",
     "build:esm": "tsc --project ./esm.json && echo '{\\n  \"type\": \"module\"\\n}' > dist/esm/package.json",
     "build:cjs": "tsc --project ./commonjs.json && echo '{\\n  \"type\": \"commonjs\"\\n}' > dist/commonjs/package.json",
+    "dev": "cd example; npm run dev",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "test": "vitest"
@@ -47,7 +48,7 @@
         "default": "./dist/commonjs/client/index.js"
       }
     },
-    "./convex.config.js": {
+    "./convex.config": {
       "import": {
         "@convex-dev/component-source": "./src/component/convex.config.ts",
         "types": "./dist/esm/component/convex.config.d.ts",
@@ -57,8 +58,10 @@
   },
   "dependencies": {
     "async-channel": "^0.2.0",
-    "convex": "^1.16.5",
     "heap-js": "^2.5.0"
+  },
+  "peerDependencies": {
+    "convex": "~1.16.5 || ~1.17.0"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^4.0.3",
