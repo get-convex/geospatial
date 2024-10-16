@@ -1,6 +1,8 @@
-# Geospatial Index (Beta)
+# Convex Geospatial Index (Beta)
 
-![image](https://github.com/user-attachments/assets/de5be125-d5f9-43e0-8496-37df1427ef07)
+[![npm version](https://badge.fury.io/js/@convex-dev%2Fgeospatial.svg)](https://badge.fury.io/js/@convex-dev%2Fgeospatial)
+
+![image](https://frugal-mandrill-176.convex.cloud/api/storage/8fb21c7f-441c-4ce9-9abb-925c31e9faab)
 
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
 After installing this component, your Convex deployment will have a key value store that maps string keys to geographic
