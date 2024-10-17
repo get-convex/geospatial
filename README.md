@@ -16,6 +16,14 @@ This component is currently in beta. It's missing some functionality, but what's
 app up to about 1,000,000 points, so reach out if you're using a much larger dataset.
 If you find a bug or have a feature request, you can [file it here](https://github.com/get-convex/geospatial/issues).
 
+## Pre-requisite: Convex
+
+You'll need an existing Convex project to use the component.
+Convex is a hosted backend platform, including a database, serverless functions,
+and a ton more you can learn about [here](https://docs.convex.dev/get-started).
+
+Run `npm create convex` or follow any of the [quickstarts](https://docs.convex.dev/home) to set one up.
+
 ## Installation
 
 First, add `@convex-dev/geospatial` to your Convex project:
