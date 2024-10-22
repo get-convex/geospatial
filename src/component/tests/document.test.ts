@@ -9,6 +9,7 @@ import { arbitraryDocuments } from "./arbitrary.helpers.js";
 const opts = {
   minLevel: 4,
   maxLevel: 16,
+  levelMod: 2,
   maxCells: 8,
 };
 
