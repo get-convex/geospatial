@@ -7,10 +7,12 @@
 <!-- START: Include on https://convex.dev/components -->
 
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
-After installing this component, your Convex deployment will have a key value store that maps string keys to geographic
-coordinates. Then, after inserting in this store, you can efficiently search for all points within a given geographic region.
 
-Oh, and since it's built on Convex, everything is automatically consistent, reactive, and cached.
+- Insert points into the geospatial key value store along with their geographic coordinates.
+- Efficiently query for all points within a given rectangle on the sphere.
+- Control the sort order for the results with a custom sorting key.
+- Filter query results with equality and `IN` clauses.
+- And since it's built on Convex, everything is automatically consistent, reactive, and cached!
 
 This component is currently in beta. It's missing some functionality, but what's there should work. We've tested the example
 app up to about 1,000,000 points, so reach out if you're using a much larger dataset.
