@@ -280,7 +280,16 @@ export const nearestPoints = query({
   handler: async (ctx, args) => {
     const logger = createLogger(args.logLevel);
     const s2 = await S2Bindings.load();
-    const query = new ClosestPointQuery(s2, logger, args.point, args.maxDistance, args.maxResults, args.minLevel, args.maxLevel, args.levelMod);
+    const query = new ClosestPointQuery(
+      s2,
+      logger,
+      args.point,
+      args.maxDistance,
+      args.maxResults,
+      args.minLevel,
+      args.maxLevel,
+      args.levelMod,
+    );
     const results = await query.execute(ctx);
     return results;
   },

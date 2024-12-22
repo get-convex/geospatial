@@ -55,17 +55,26 @@ export class ClosestPointQuery {
       );
 
       if (canSubdivide && sizeEstimate > this.maxResults * SUBDIVIDE_FACTOR) {
-        const nextLevel = Math.min(candidate.level + this.levelMod, this.maxLevel);
-        for (const cellID of this.s2.cellIDChildren(candidate.cellID, nextLevel)) {
+        const nextLevel = Math.min(
+          candidate.level + this.levelMod,
+          this.maxLevel,
+        );
+        for (const cellID of this.s2.cellIDChildren(
+          candidate.cellID,
+          nextLevel,
+        )) {
           const distance = this.s2.minDistanceToCell(this.point, cellID);
           this.addCandidate(cellID, nextLevel, distance);
         }
       } else {
         // Query the current cell and add its results in.
-        const pointEntries = await ctx.db.query("pointsByCell")
+        const pointEntries = await ctx.db
+          .query("pointsByCell")
           .withIndex("cell", (q) => q.eq("cell", cellIDToken))
           .collect();
-        const pointIds = pointEntries.map((entry) => decodeTupleKey(entry.tupleKey).pointId);
+        const pointIds = pointEntries.map(
+          (entry) => decodeTupleKey(entry.tupleKey).pointId,
+        );
         const points = await Promise.all(pointIds.map((id) => ctx.db.get(id)));
         for (const point of points) {
           if (!point) {
@@ -75,7 +84,9 @@ export class ClosestPointQuery {
         }
       }
     }
-    const entries = this.results.toArray().sort((a, b) => a.distance - b.distance);
+    const entries = this.results
+      .toArray()
+      .sort((a, b) => a.distance - b.distance);
     const points = await Promise.all(entries.map((r) => ctx.db.get(r.pointID)));
     const results = [];
     for (let i = 0; i < entries.length; i++) {
@@ -113,7 +124,7 @@ export class ClosestPointQuery {
       if (worst === null || candidate.distance <= worst.distance) {
         return candidate;
       }
-    }    
+    }
     return null;
   }
 
@@ -141,9 +152,9 @@ type CellCandidate = {
   cellID: bigint;
   level: number;
   distance: ChordAngle;
-}
+};
 
 type Result = {
   pointID: Id<"points">;
   distance: ChordAngle;
-}
+};

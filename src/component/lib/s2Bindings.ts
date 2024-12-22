@@ -112,7 +112,12 @@ export class S2Bindings {
   }
 
   pointDistance(point1: Point, point2: Point): ChordAngle {
-    return this.exports.pointDistance(point1.latitude, point1.longitude, point2.latitude, point2.longitude);
+    return this.exports.pointDistance(
+      point1.latitude,
+      point1.longitude,
+      point2.latitude,
+      point2.longitude,
+    );
   }
 
   initialCells(minLevel: number): CellID[] {
@@ -128,7 +133,11 @@ export class S2Bindings {
   }
 
   minDistanceToCell(point: Point, cellID: CellID): ChordAngle {
-    return this.exports.minDistanceToCell(point.latitude, point.longitude, cellID);
+    return this.exports.minDistanceToCell(
+      point.latitude,
+      point.longitude,
+      cellID,
+    );
   }
 
   cellIDChildren(cellID: CellID, level: number): CellID[] {
