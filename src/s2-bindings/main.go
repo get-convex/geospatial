@@ -104,6 +104,13 @@ func metersToChordAngle(meters float64) float64 {
 	return float64(chordAngle)
 }
 
+//export chordAngleToMeters
+func chordAngleToMeters(chordAngle float64) float64 {
+	angle := s1.ChordAngle(chordAngle).Angle()
+	meters := angle.Radians() * EARTH_RADIUS_METERS
+	return meters
+}
+
 //export pointDistance
 func pointDistance(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64) float64 {
 	point1 := s2.PointFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))
@@ -113,7 +120,7 @@ func pointDistance(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 fl
 	return float64(chordAngle)
 }
 
-const CELLS_BUFFER_SIZE int = 1024
+const CELLS_BUFFER_SIZE int = 4096
 
 var cellsBuffer [CELLS_BUFFER_SIZE]uint64
 

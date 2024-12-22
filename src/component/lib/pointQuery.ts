@@ -6,10 +6,11 @@ import { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
 import { cellCounterKey } from "../streams/cellRange.js";
 import { decodeTupleKey } from "./tupleKey.js";
+import { Logger } from "./logging.js";
 
 const SUBDIVIDE_FACTOR = 4;
 
-class ClosestPointQuery {
+export class ClosestPointQuery {
   // Min-heap of cells to process.
   toProcess: Heap<CellCandidate>;
 
@@ -20,6 +21,7 @@ class ClosestPointQuery {
 
   constructor(
     private s2: S2Bindings,
+    private logger: Logger,
     private point: Point,
     private maxDistance: Meters,
     private maxResults: number,
@@ -40,7 +42,7 @@ class ClosestPointQuery {
 
   async execute(ctx: QueryCtx) {
     while (true) {
-      const candidate = this.peekCandidate();
+      const candidate = this.popCandidate();
       if (candidate === null) {
         break;
       }
@@ -73,7 +75,21 @@ class ClosestPointQuery {
         }
       }
     }
-    return this.results.toArray().sort((a, b) => a.distance - b.distance);
+    const entries = this.results.toArray().sort((a, b) => a.distance - b.distance);
+    const points = await Promise.all(entries.map((r) => ctx.db.get(r.pointID)));
+    const results = [];
+    for (let i = 0; i < entries.length; i++) {
+      const point = points[i];
+      if (!point) {
+        throw new Error("Point not found");
+      }
+      results.push({
+        key: point.key,
+        coordinates: point.coordinates,
+        distance: this.s2.chordAngleToMeters(entries[i].distance),
+      });
+    }
+    return results;
   }
 
   addCandidate(cellID: bigint, level: number, distance: ChordAngle) {
@@ -87,18 +103,17 @@ class ClosestPointQuery {
     this.toProcess.push({ cellID, level, distance });
   }
 
-  peekCandidate(): CellCandidate | null {
+  popCandidate(): CellCandidate | null {
     const worst = this.worstResult();
     while (true) {
-      const candidate = this.toProcess.peek();
+      const candidate = this.toProcess.pop();
       if (candidate === undefined) {
         break;
       }
       if (worst === null || candidate.distance <= worst.distance) {
         return candidate;
       }
-      this.toProcess.pop();
-    }
+    }    
     return null;
   }
 

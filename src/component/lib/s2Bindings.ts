@@ -107,6 +107,10 @@ export class S2Bindings {
     return this.exports.metersToChordAngle(meters);
   }
 
+  chordAngleToMeters(chordAngle: number): number {
+    return this.exports.chordAngleToMeters(chordAngle);
+  }
+
   pointDistance(point1: Point, point2: Point): ChordAngle {
     return this.exports.pointDistance(point1.latitude, point1.longitude, point2.latitude, point2.longitude);
   }

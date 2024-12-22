@@ -16,6 +16,7 @@ import type * as lib_d64 from "../lib/d64.js";
 import type * as lib_goRuntime from "../lib/goRuntime.js";
 import type * as lib_interval from "../lib/interval.js";
 import type * as lib_logging from "../lib/logging.js";
+import type * as lib_pointQuery from "../lib/pointQuery.js";
 import type * as lib_primitive from "../lib/primitive.js";
 import type * as lib_s2Bindings from "../lib/s2Bindings.js";
 import type * as lib_s2wasm from "../lib/s2wasm.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/goRuntime": typeof lib_goRuntime;
   "lib/interval": typeof lib_interval;
   "lib/logging": typeof lib_logging;
+  "lib/pointQuery": typeof lib_pointQuery;
   "lib/primitive": typeof lib_primitive;
   "lib/s2Bindings": typeof lib_s2Bindings;
   "lib/s2wasm": typeof lib_s2wasm;
@@ -174,6 +176,25 @@ export type Mounts = {
           key: string;
         }>;
       }
+    >;
+    nearestPoints: FunctionReference<
+      "query",
+      "public",
+      {
+        levelMod: number;
+        logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
+        maxDistance: number;
+        maxLevel: number;
+        maxResults: number;
+        minLevel: number;
+        nextCursor?: string;
+        point: { latitude: number; longitude: number };
+      },
+      Array<{
+        coordinates: { latitude: number; longitude: number };
+        distance: number;
+        key: string;
+      }>
     >;
   };
 };
