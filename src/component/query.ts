@@ -69,6 +69,22 @@ export const debugCells = query({
   },
 });
 
+const nearestNeighbors = query({
+  args: {
+    point,
+    maxResult: v.number(),
+    nextCursor: v.optional(v.string()),
+    logLevel,
+  },
+  returns: v.array(queryResult),
+  handler: async (ctx, args) => {
+    const logger = createLogger(args.logLevel);
+    const s2 = await S2Bindings.load();
+
+    throw new Error("Not implemented");  
+  },
+});
+
 const executeResult = v.object({
   results: v.array(queryResult),
   nextCursor: v.optional(v.string()),
