@@ -268,7 +268,7 @@ export const execute = query({
 export const nearestPoints = query({
   args: {
     point,
-    maxDistance: v.number(),
+    maxDistance: v.optional(v.number()),
     maxResults: v.number(),
     minLevel: v.number(),
     maxLevel: v.number(),
@@ -280,6 +280,9 @@ export const nearestPoints = query({
   handler: async (ctx, args) => {
     const logger = createLogger(args.logLevel);
     const s2 = await S2Bindings.load();
+    if (args.maxResults === 0) {
+      return [];
+    }
     const query = new ClosestPointQuery(
       s2,
       logger,

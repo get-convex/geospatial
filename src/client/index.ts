@@ -218,7 +218,7 @@ export class GeospatialIndex<
     ctx: QueryCtx,
     point: Point,
     maxResults: number,
-    maxDistance: number,
+    maxDistance?: number,
   ) {
     const resp = await ctx.runQuery(this.component.query.nearestPoints, {
       point,

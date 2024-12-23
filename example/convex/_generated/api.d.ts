@@ -166,7 +166,7 @@ export declare const components: {
         {
           levelMod: number;
           logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-          maxDistance: number;
+          maxDistance?: number;
           maxLevel: number;
           maxResults: number;
           minLevel: number;

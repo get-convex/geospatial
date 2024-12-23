@@ -19,6 +19,17 @@ export const addPoint = mutation({
   },
 });
 
+export const nearestPoints = query({
+  args: {
+    point,
+    maxRows: v.number(),
+    maxDistance: v.optional(v.number()),
+  },
+  handler: async (ctx, { point, maxRows, maxDistance }) => {
+    return await geospatial.queryNearest(ctx, point, maxRows, maxDistance);
+  },
+});
+
 export const search = query({
   args: {
     rectangle,

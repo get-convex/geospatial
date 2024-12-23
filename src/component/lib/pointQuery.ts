@@ -15,13 +15,13 @@ export class ClosestPointQuery {
   // Max-heap of results.
   results: Heap<Result>;
 
-  maxDistanceChordAngle: ChordAngle;
+  maxDistanceChordAngle?: ChordAngle;
 
   constructor(
     private s2: S2Bindings,
     private logger: Logger,
     private point: Point,
-    private maxDistance: Meters,
+    private maxDistance: Meters | undefined,
     private maxResults: number,
     private minLevel: number,
     private maxLevel: number,
@@ -29,7 +29,7 @@ export class ClosestPointQuery {
   ) {
     this.toProcess = new Heap<CellCandidate>((a, b) => a.distance - b.distance);
     this.results = new Heap<Result>((a, b) => b.distance - a.distance);
-    this.maxDistanceChordAngle = this.s2.metersToChordAngle(this.maxDistance);
+    this.maxDistanceChordAngle = this.maxDistance && this.s2.metersToChordAngle(this.maxDistance);
 
     for (const cellID of this.s2.initialCells(this.minLevel)) {
       const distance = this.s2.minDistanceToCell(this.point, cellID);
@@ -76,7 +76,7 @@ export class ClosestPointQuery {
         this.logger.debug(`Found ${pointEntries.length} points in cell ${cellIDToken}`);
         const pointIds = pointEntries.map(
           (entry) => decodeTupleKey(entry.tupleKey).pointId,
-        );        
+        );
         const points = await Promise.all(pointIds.map((id) => ctx.db.get(id)));
         for (const point of points) {
           if (!point) {
@@ -106,24 +106,24 @@ export class ClosestPointQuery {
   }
 
   addCandidate(cellID: bigint, level: number, distance: ChordAngle) {
-    if (distance > this.maxDistanceChordAngle) {
+    if (this.maxDistanceChordAngle && distance > this.maxDistanceChordAngle) {
       return;
     }
-    const worst = this.worstResult();
-    if (worst !== null && distance >= worst.distance) {
+    const threshold = this.distanceThreshold();
+    if (threshold !== undefined && distance >= threshold) {
       return;
     }
     this.toProcess.push({ cellID, level, distance });
   }
 
   popCandidate(): CellCandidate | null {
-    const worst = this.worstResult();
+    const threshold = this.distanceThreshold();
     while (true) {
       const candidate = this.toProcess.pop();
       if (candidate === undefined) {
         break;
       }
-      if (worst === null || candidate.distance <= worst.distance) {
+      if (threshold === undefined || candidate.distance <= threshold) {
         return candidate;
       }
     }
@@ -132,8 +132,11 @@ export class ClosestPointQuery {
 
   addResult(pointID: Id<"points">, point: Point) {
     const distance = this.s2.pointDistance(this.point, point);
-    const worst = this.worstResult();
-    if (worst !== null && distance >= worst.distance) {
+    const threshold = this.distanceThreshold();
+    if (this.maxDistanceChordAngle && distance > this.maxDistanceChordAngle) {
+      return;
+    }
+    if (threshold !== undefined && distance >= threshold) {
       return;
     }
     while (this.results.size() >= this.maxResults) {
@@ -142,11 +145,15 @@ export class ClosestPointQuery {
     this.results.push({ pointID, distance });
   }
 
-  worstResult(): Result | null {
-    if (this.results.size() < this.maxResults) {
-      return null;
+  distanceThreshold(): ChordAngle | undefined {
+    const worstEntry = this.results.peek();
+    if (worstEntry && this.results.size() >= this.maxResults) {
+      if (this.maxDistanceChordAngle && worstEntry.distance > this.maxDistanceChordAngle) {
+        throw new Error("Max distance exceeded by entry in heap?");
+      }
+      return worstEntry.distance;
     }
-    return this.results.peek() ?? null;
+    return this.maxDistanceChordAngle;
   }
 }
 
