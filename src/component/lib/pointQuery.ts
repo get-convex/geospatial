@@ -8,8 +8,6 @@ import { cellCounterKey } from "../streams/cellRange.js";
 import { decodeTupleKey } from "./tupleKey.js";
 import { Logger } from "./logging.js";
 
-const SUBDIVIDE_FACTOR = 4;
-
 export class ClosestPointQuery {
   // Min-heap of cells to process.
   toProcess: Heap<CellCandidate>;
@@ -43,6 +41,7 @@ export class ClosestPointQuery {
   async execute(ctx: QueryCtx) {
     while (true) {
       const candidate = this.popCandidate();
+      this.logger.debug(`Processing candidate: ${candidate?.cellID}`);
       if (candidate === null) {
         break;
       }
@@ -53,8 +52,10 @@ export class ClosestPointQuery {
         ctx,
         cellCounterKey(cellIDToken),
       );
+      this.logger.debug(`Size estimate for ${cellIDToken}: ${sizeEstimate}`);
 
-      if (canSubdivide && sizeEstimate > this.maxResults * SUBDIVIDE_FACTOR) {
+      if (canSubdivide && sizeEstimate >= approximateCounter.SAMPLING_RATE) {
+        this.logger.debug(`Subdividing cell ${candidate.cellID}`);
         const nextLevel = Math.min(
           candidate.level + this.levelMod,
           this.maxLevel,
@@ -72,9 +73,10 @@ export class ClosestPointQuery {
           .query("pointsByCell")
           .withIndex("cell", (q) => q.eq("cell", cellIDToken))
           .collect();
+        this.logger.debug(`Found ${pointEntries.length} points in cell ${cellIDToken}`);
         const pointIds = pointEntries.map(
           (entry) => decodeTupleKey(entry.tupleKey).pointId,
-        );
+        );        
         const points = await Promise.all(pointIds.map((id) => ctx.db.get(id)));
         for (const point of points) {
           if (!point) {

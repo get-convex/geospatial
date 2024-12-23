@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
 )
@@ -166,11 +168,12 @@ func minDistanceToCell(latDeg float64, lngDeg float64, cellID uint64) float64 {
 func cellIDChildren(cellIDInt uint64, level int) int {
 	cellID := s2.CellID(cellIDInt)
 	count := 0
-	for cellID := cellID.ChildBeginAtLevel(level); cellID != cellID.ChildEndAtLevel(level); cellID = cellID.Next() {
+	for childCellID := cellID.ChildBeginAtLevel(level); childCellID != cellID.ChildEndAtLevel(level); childCellID = childCellID.Next() {
 		if count >= CELLS_BUFFER_SIZE {
+			fmt.Printf("cellIDChildren: buffer overflow for cellID %d at level %d, count %d\n", cellIDInt, level, count)
 			return -1
 		}
-		cellsBuffer[count] = uint64(cellID)
+		cellsBuffer[count] = uint64(childCellID)
 		count++
 	}
 	return count
