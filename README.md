@@ -101,7 +101,7 @@ export const geospatial = new GeospatialIndex<
 >(components.geospatial);
 ```
 
-## Querying points
+## Querying points within a shape
 
 After inserting some points, you can query them with the `query` API.
 
@@ -235,6 +235,30 @@ const example = query({
 ```
 
 **Note: you typically pass the `nextCursor` in from a client that is paginating through results, to avoid loading too much data in a single query.**
+
+## Querying the points nearest a query point
+
+You can also query for the points closest to a given point.
+
+```ts
+// convex/index.ts
+
+const example = query({
+  handler: async (ctx) => {
+    const maxResults = 16;
+    const maxDistance = 10000;
+    const result = await geospatial.queryNearest(
+      ctx,
+      { latitude: 40.7813, longitude: -73.9737 },
+      maxResults,
+      maxDistance,
+    );
+    return result;
+  },
+});
+```
+
+The `maxDistance` parameter is optional, but providing it can greatly speed up searching the index.
 
 ## Example
 

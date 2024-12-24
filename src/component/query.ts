@@ -12,6 +12,7 @@ import { Channel, ChannelClosedError } from "async-channel";
 import { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
+import { ClosestPointQuery } from "./lib/pointQuery.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -35,6 +36,12 @@ const geospatialQuery = v.object({
 const queryResult = v.object({
   key: v.string(),
   coordinates: point,
+});
+
+const queryResultWithDistance = v.object({
+  key: v.string(),
+  coordinates: point,
+  distance: v.number(),
 });
 
 export const debugCells = query({
@@ -255,5 +262,38 @@ export const execute = query({
     logger.timeEnd("execute");
 
     return { results, nextCursor };
+  },
+});
+
+export const nearestPoints = query({
+  args: {
+    point,
+    maxDistance: v.optional(v.number()),
+    maxResults: v.number(),
+    minLevel: v.number(),
+    maxLevel: v.number(),
+    levelMod: v.number(),
+    nextCursor: v.optional(v.string()),
+    logLevel,
+  },
+  returns: v.array(queryResultWithDistance),
+  handler: async (ctx, args) => {
+    const logger = createLogger(args.logLevel);
+    const s2 = await S2Bindings.load();
+    if (args.maxResults === 0) {
+      return [];
+    }
+    const query = new ClosestPointQuery(
+      s2,
+      logger,
+      args.point,
+      args.maxDistance,
+      args.maxResults,
+      args.minLevel,
+      args.maxLevel,
+      args.levelMod,
+    );
+    const results = await query.execute(ctx);
+    return results;
   },
 });

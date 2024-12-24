@@ -1,4 +1,4 @@
-import { Point, Rectangle } from "../types.js";
+import { ChordAngle, Point, Rectangle } from "../types.js";
 import { Go } from "./goRuntime.js";
 import { wasmSource } from "./s2wasm.js";
 
@@ -10,7 +10,7 @@ for (let i = 0; i < wasmBinary.length; i++) {
   wasmBuffer[i] = wasmBinary.charCodeAt(i);
 }
 
-export type CellID = BigInt;
+export type CellID = bigint;
 
 // See https://docs.s2cell.aliddell.com/en/stable/useful_s2_links.html for useful articles
 // for working with S2.
@@ -49,6 +49,10 @@ export class S2Bindings {
 
   cellIDParent(cellID: CellID, level: number): CellID {
     return this.exports.cellIDParent(cellID, level);
+  }
+
+  cellIDLevel(cellID: CellID): number {
+    return this.exports.cellIDLevel(cellID);
   }
 
   coverRectangle(
@@ -97,5 +101,54 @@ export class S2Bindings {
       result.push({ latitude, longitude });
     }
     return result;
+  }
+
+  metersToChordAngle(meters: number): number {
+    return this.exports.metersToChordAngle(meters);
+  }
+
+  chordAngleToMeters(chordAngle: number): number {
+    return this.exports.chordAngleToMeters(chordAngle);
+  }
+
+  pointDistance(point1: Point, point2: Point): ChordAngle {
+    return this.exports.pointDistance(
+      point1.latitude,
+      point1.longitude,
+      point2.latitude,
+      point2.longitude,
+    );
+  }
+
+  initialCells(minLevel: number): CellID[] {
+    const len = this.exports.initialCells(minLevel);
+    if (len < 0) {
+      throw new Error(`Failed to get initial cells`);
+    }
+    const ptr = this.exports.cellsBufferPtr();
+    const wasmMemory = new Uint8Array(this.exports.memory.buffer);
+    const buffer = wasmMemory.slice(ptr + 0, ptr + len * 8);
+    const uint64s = new BigUint64Array(buffer.buffer);
+    return [...uint64s];
+  }
+
+  minDistanceToCell(point: Point, cellID: CellID): ChordAngle {
+    return this.exports.minDistanceToCell(
+      point.latitude,
+      point.longitude,
+      cellID,
+    );
+  }
+
+  cellIDChildren(cellID: CellID, level: number): CellID[] {
+    const len = this.exports.cellIDChildren(cellID, level);
+    if (len < 0) {
+      throw new Error(`Failed to get cell ID children for ${cellID} at level ${level}`);
+    }
+    const ptr = this.exports.cellsBufferPtr();
+    const wasmMemory = new Uint8Array(this.exports.memory.buffer);
+    const buffer = wasmMemory.slice(ptr + 0, ptr + len * 8);
+    const uint64s = new BigUint64Array(buffer.buffer);
+    return [...uint64s];
   }
 }

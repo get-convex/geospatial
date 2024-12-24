@@ -19,6 +19,30 @@ export const addPoint = mutation({
   },
 });
 
+export const nearestPoints = query({
+  args: {
+    point,
+    maxRows: v.number(),
+    maxDistance: v.optional(v.number()),
+  },
+  handler: async (ctx, { point, maxRows, maxDistance }) => {
+    const results = await geospatial.queryNearest(ctx, point, maxRows, maxDistance);
+    return await Promise.all(results.map(async (result) => {
+      const row = await ctx.db.get(result.key as Id<"locations">);
+      if (!row) {
+        throw new Error("Invalid locationId");
+      }
+      return {
+        ...result,
+        coordinates: {
+          ...result.coordinates,
+          name: row.name,
+        },
+      };
+    }));
+  },
+});
+
 export const search = query({
   args: {
     rectangle,

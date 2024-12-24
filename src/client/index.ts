@@ -206,6 +206,33 @@ export class GeospatialIndex<
   }
 
   /**
+   * Query for the nearest points to a given point.
+   *
+   * @param ctx - The Convex query context.
+   * @param point - The point to query for.
+   * @param maxResults - The maximum number of results to return.
+   * @param maxDistance - The maximum distance to return results within in meters.
+   * @returns - An array of objects with the key-coordinate pairs and their distance from the query point in meters.
+   */
+  async queryNearest(
+    ctx: QueryCtx,
+    point: Point,
+    maxResults: number,
+    maxDistance?: number,
+  ) {
+    const resp = await ctx.runQuery(this.component.query.nearestPoints, {
+      point,
+      maxDistance,
+      maxResults,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
+      logLevel: this.logLevel,
+    });
+    return resp as { key: Key; coordinates: Point; distance: number }[];
+  }
+
+  /**
    * Debug the S2 cells that would be queried for a given rectangle.
    *
    * @param ctx - The Convex query context.

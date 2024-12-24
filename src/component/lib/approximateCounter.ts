@@ -9,7 +9,7 @@ import { xxHash32 } from "./xxhash.js";
 //   So, many concurrent increments and decrements to the same key won't contend.
 // - The counter never goes negative, since we use a deterministic hash.
 
-const SAMPLING_RATE = 1024;
+export const SAMPLING_RATE = 1024;
 
 export async function increment(
   ctx: MutationCtx,
@@ -57,9 +57,7 @@ export async function estimateCount(ctx: QueryCtx, key: string) {
     .query("approximateCounters")
     .withIndex("key", (q) => q.eq("key", key))
     .first();
-  if (!existing) {
-    return 0;
-  }
+  const count = existing?.count ?? 0;
   // Break ties between keys by their xxhash.
-  return existing.count * SAMPLING_RATE + (xxHash32(key) % SAMPLING_RATE);
+  return count * SAMPLING_RATE + (xxHash32(key) % SAMPLING_RATE);
 }

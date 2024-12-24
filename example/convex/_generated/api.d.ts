@@ -160,6 +160,25 @@ export declare const components: {
           }>;
         }
       >;
+      nearestPoints: FunctionReference<
+        "query",
+        "internal",
+        {
+          levelMod: number;
+          logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
+          maxDistance?: number;
+          maxLevel: number;
+          maxResults: number;
+          minLevel: number;
+          nextCursor?: string;
+          point: { latitude: number; longitude: number };
+        },
+        Array<{
+          coordinates: { latitude: number; longitude: number };
+          distance: number;
+          key: string;
+        }>
+      >;
     };
   };
 };

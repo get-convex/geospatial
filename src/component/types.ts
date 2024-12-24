@@ -28,3 +28,6 @@ export const rectangle = v.object({
   north: latitude,
 });
 export type Rectangle = Infer<typeof rectangle>;
+
+export type Meters = number;
+export type ChordAngle = number;
