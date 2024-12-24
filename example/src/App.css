@@ -1,8 +1,41 @@
+:root {
+  /* Light mode colors */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #213547;
+  --text-secondary: #666666;
+  --border-color: #ddd;
+  --accent-primary: #4a90e2;
+  --accent-secondary: #357abd;
+  --accent-light: #f0f7ff;
+  --accent-border: #e1efff;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-color-strong: rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode colors */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --text-primary: rgba(255, 255, 255, 0.87);
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --border-color: #404040;
+    --accent-primary: #5a9ee8;
+    --accent-secondary: #4a90e2;
+    --accent-light: rgba(74, 144, 226, 0.15);
+    --accent-border: rgba(74, 144, 226, 0.3);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-color-strong: rgba(0, 0, 0, 0.4);
+  }
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  color: var(--text-primary);
 }
 
 .logo {
@@ -144,4 +177,183 @@ button {
   background-color: white;
   color: var(--violet-11);
   cursor: default;
+}
+
+/* Emoji marker styling */
+.emoji-marker {
+  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+}
+
+.emoji-marker:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(74, 144, 226, 0.4));
+  z-index: 1000 !important;
+}
+
+/* Antd Select customization */
+.ant-select-selector {
+  border-radius: 6px !important;
+  border-color: var(--border-color) !important;
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+.ant-select-selection-placeholder {
+  color: var(--text-secondary) !important;
+}
+
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: var(--accent-primary) !important;
+}
+
+.ant-select-focused .ant-select-selector,
+.ant-select-selector:focus,
+.ant-select-selector:active {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2) !important;
+}
+
+.ant-select-dropdown {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+.ant-select-item {
+  color: var(--text-primary) !important;
+  transition: background-color 0.2s !important;
+}
+
+.ant-select-item-option-content {
+  color: var(--text-primary) !important;
+}
+
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: var(--accent-light) !important;
+  color: var(--text-primary) !important;
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background-color: var(--accent-light) !important;
+}
+
+.ant-select-selection-item {
+  color: var(--text-primary) !important;
+}
+
+.ant-select-clear {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+}
+
+.ant-select-arrow {
+  color: var(--text-secondary) !important;
+}
+
+/* Button hover effects */
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--accent-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s;
+  background-color: var(--bg-secondary);
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--accent-primary);
+}
+
+input[type="checkbox"]:checked::before {
+  content: "✓";
+  position: absolute;
+  color: var(--bg-secondary);
+  font-size: 12px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Number input styling */
+input[type="number"] {
+  -moz-appearance: textfield;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Loading indicator animation */
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.loading-indicator {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Map zoom controls */
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 4px var(--shadow-color) !important;
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  background-color: var(--bg-secondary) !important;
+  border: none !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  border-radius: 6px !important;
+  color: var(--accent-primary) !important;
+  transition: background-color 0.2s !important;
+}
+
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+  background-color: var(--accent-light) !important;
+  color: var(--accent-secondary) !important;
+}
+
+/* Attribution control */
+.leaflet-control-attribution {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+}
+
+/* Dark mode specific map adjustments */
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
+  }
+  
+  .leaflet-container {
+    background: #333 !important;
+  }
 }
