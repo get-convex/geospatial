@@ -238,7 +238,7 @@ const example = query({
 
 ## Querying the points nearest a query point
 
-You can also query for the points closest to a given point.
+You can also query for the points closest to a given point, optionally limiting to a maximum distance (in meters).
 
 ```ts
 // convex/index.ts
