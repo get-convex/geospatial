@@ -7,31 +7,12 @@ import { cellCounterKey } from "./streams/cellRange.js";
 import * as approximateCounter from "./lib/approximateCounter.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
 
-const geoDocument= v.object({
+const geoDocument = v.object({
   key: v.string(),
   coordinates: point,
   sortKey: v.number(),
   filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
 });
-
-function s2Cells(
-  s2: S2Bindings,
-  point: Point,
-  opts: {
-    minLevel: number;
-    maxLevel: number;
-    levelMod: number;
-    maxCells: number;
-  },
-): string[] {
-  const leafCellID = s2.cellIDFromPoint(point);
-  const cells = [];
-  for (let i = opts.minLevel; i <= opts.maxLevel; i += opts.levelMod) {
-    const parentCellID = s2.cellIDParent(leafCellID, i);
-    cells.push(s2.cellIDToken(parentCellID));
-  }
-  return cells;
-}
 
 export const insert = mutation({
   args: {
@@ -101,10 +82,28 @@ export const remove = mutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
-    const success = await removePointByKey(ctx, s2, args.key, args);
-    return success;
+    return await removePointByKey(ctx, s2, args.key, args);
   },
 });
+
+function s2Cells(
+  s2: S2Bindings,
+  point: Point,
+  opts: {
+    minLevel: number;
+    maxLevel: number;
+    levelMod: number;
+    maxCells: number;
+  },
+): string[] {
+  const leafCellID = s2.cellIDFromPoint(point);
+  const cells = [];
+  for (let i = opts.minLevel; i <= opts.maxLevel; i += opts.levelMod) {
+    const parentCellID = s2.cellIDParent(leafCellID, i);
+    cells.push(s2.cellIDToken(parentCellID));
+  }
+  return cells;
+}
 
 async function removePointByKey(
   ctx: MutationCtx,
@@ -124,7 +123,6 @@ async function removePointByKey(
   if (!existing) {
     return false;
   }
-
   const cells = s2Cells(s2, existing.coordinates, opts);
   const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
   for (const cell of cells) {
