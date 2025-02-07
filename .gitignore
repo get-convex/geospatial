@@ -16,4 +16,3 @@ node_modules
 frontend/package.json
 # npm pack output
 *.tgz
-npm run format
