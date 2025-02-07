@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server.js";
+import { mutation, query, MutationCtx } from "./_generated/server.js";
 import { Point, point, primitive } from "./types.js";
 import { encodeTupleKey } from "./lib/tupleKey.js";
 import { filterCounterKey } from "./streams/filterKeyRange.js";
@@ -14,29 +14,9 @@ const geoDocument = v.object({
   filterKeys: v.record(v.string(), v.union(primitive, v.array(primitive))),
 });
 
-function s2Cells(
-  s2: S2Bindings,
-  point: Point,
-  opts: {
-    minLevel: number;
-    maxLevel: number;
-    levelMod: number;
-    maxCells: number;
-  },
-): string[] {
-  const leafCellID = s2.cellIDFromPoint(point);
-  const cells = [];
-  for (let i = opts.minLevel; i <= opts.maxLevel; i += opts.levelMod) {
-    const parentCellID = s2.cellIDParent(leafCellID, i);
-    cells.push(s2.cellIDToken(parentCellID));
-  }
-  return cells;
-}
-
 export const insert = mutation({
   args: {
     document: geoDocument,
-
     minLevel: v.number(),
     maxLevel: v.number(),
     levelMod: v.number(),
@@ -45,16 +25,8 @@ export const insert = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
-
-    await remove(ctx, {
-      key: args.document.key,
-      minLevel: args.minLevel,
-      maxLevel: args.maxLevel,
-      levelMod: args.levelMod,
-      maxCells: args.maxCells,
-    });
+    await removePointByKey(ctx, s2, args.document.key, args);
     const pointId = await ctx.db.insert("points", args.document);
-
     const cells = s2Cells(s2, args.document.coordinates, args);
     const tupleKey = encodeTupleKey(args.document.sortKey, pointId);
     for (const cell of cells) {
@@ -110,60 +82,87 @@ export const remove = mutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const s2 = await S2Bindings.load();
+    return await removePointByKey(ctx, s2, args.key, args);
+  },
+});
 
-    const existing = await ctx.db
-      .query("points")
-      .withIndex("key", (q) => q.eq("key", args.key))
-      .first();
-    if (!existing) {
-      return false;
+function s2Cells(
+  s2: S2Bindings,
+  point: Point,
+  opts: {
+    minLevel: number;
+    maxLevel: number;
+    levelMod: number;
+    maxCells: number;
+  },
+): string[] {
+  const leafCellID = s2.cellIDFromPoint(point);
+  const cells = [];
+  for (let i = opts.minLevel; i <= opts.maxLevel; i += opts.levelMod) {
+    const parentCellID = s2.cellIDParent(leafCellID, i);
+    cells.push(s2.cellIDToken(parentCellID));
+  }
+  return cells;
+}
+
+async function removePointByKey(
+  ctx: MutationCtx,
+  s2: S2Bindings,
+  key: string,
+  opts: {
+    minLevel: number;
+    maxLevel: number;
+    levelMod: number;
+    maxCells: number;
+  },
+): Promise<boolean> {
+  const existing = await ctx.db
+    .query("points")
+    .withIndex("key", (q) => q.eq("key", key))
+    .first();
+  if (!existing) {
+    return false;
+  }
+  const cells = s2Cells(s2, existing.coordinates, opts);
+  const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
+  for (const cell of cells) {
+    const existingCell = await ctx.db
+      .query("pointsByCell")
+      .withIndex("cell", (q) => q.eq("cell", cell).eq("tupleKey", tupleKey))
+      .unique();
+    if (!existingCell) {
+      throw new Error(
+        `Invariant failed: Missing cell ${cell} for point ${existing._id}`,
+      );
     }
-
-    const cells = s2Cells(s2, existing.coordinates, args);
-    const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
-    for (const cell of cells) {
-      const existingCell = await ctx.db
-        .query("pointsByCell")
-        .withIndex("cell", (q) => q.eq("cell", cell).eq("tupleKey", tupleKey))
+    await ctx.db.delete(existingCell._id);
+    await approximateCounter.decrement(ctx, existing._id, cellCounterKey(cell));
+  }
+  for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
+    const valueArray = filterDoc instanceof Array ? filterDoc : [filterDoc];
+    for (const filterValue of valueArray) {
+      const existingFilterKey = await ctx.db
+        .query("pointsByFilterKey")
+        .withIndex("filterKey", (q) =>
+          q
+            .eq("filterKey", filterKey)
+            .eq("filterValue", filterValue)
+            .eq("tupleKey", tupleKey),
+        )
         .unique();
-      if (!existingCell) {
+      if (!existingFilterKey) {
         throw new Error(
-          `Invariant failed: Missing cell ${cell} for point ${existing._id}`,
+          `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`,
         );
       }
-      await ctx.db.delete(existingCell._id);
+      await ctx.db.delete(existingFilterKey._id);
       await approximateCounter.decrement(
         ctx,
         existing._id,
-        cellCounterKey(cell),
+        filterCounterKey(filterKey, filterValue),
       );
     }
-    for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
-      const valueArray = filterDoc instanceof Array ? filterDoc : [filterDoc];
-      for (const filterValue of valueArray) {
-        const existingFilterKey = await ctx.db
-          .query("pointsByFilterKey")
-          .withIndex("filterKey", (q) =>
-            q
-              .eq("filterKey", filterKey)
-              .eq("filterValue", filterValue)
-              .eq("tupleKey", tupleKey),
-          )
-          .unique();
-        if (!existingFilterKey) {
-          throw new Error(
-            `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`,
-          );
-        }
-        await ctx.db.delete(existingFilterKey._id);
-        await approximateCounter.decrement(
-          ctx,
-          existing._id,
-          filterCounterKey(filterKey, filterValue),
-        );
-      }
-    }
-    await ctx.db.delete(existing._id);
-    return true;
-  },
-});
+  }
+  await ctx.db.delete(existing._id);
+  return true;
+}

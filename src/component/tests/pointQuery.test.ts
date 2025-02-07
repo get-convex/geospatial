@@ -20,7 +20,7 @@ test("closest point query - basic functionality", async () => {
   const t = convexTest(schema, modules);
   const s2 = await S2Bindings.load();
   const logger = createLogger("INFO");
-  
+
   // Insert some test points
   const points = [
     {
@@ -61,7 +61,7 @@ test("closest point query - basic functionality", async () => {
       1, // maxResults
       opts.minLevel,
       opts.maxLevel,
-      opts.levelMod
+      opts.levelMod,
     );
     const result1 = await query1.execute(ctx);
     expect(result1.length).toBe(1);
@@ -77,7 +77,7 @@ test("closest point query - basic functionality", async () => {
       2,
       opts.minLevel,
       opts.maxLevel,
-      opts.levelMod
+      opts.levelMod,
     );
     const result2 = await query2.execute(ctx);
     expect(result2.length).toBe(2);
@@ -94,7 +94,7 @@ test("closest point query - basic functionality", async () => {
       10,
       opts.minLevel,
       opts.maxLevel,
-      opts.levelMod
+      opts.levelMod,
     );
     const result3 = await query3.execute(ctx);
     expect(result3.length).toBe(1);
@@ -127,13 +127,15 @@ fcTest.prop({ documents: arbitraryDocuments })(
         documents.length,
         opts.minLevel,
         opts.maxLevel,
-        opts.levelMod
+        opts.levelMod,
       );
       const results = await query.execute(ctx);
 
       // Verify results are ordered by distance
       for (let i = 1; i < results.length; i++) {
-        expect(results[i - 1].distance).toBeLessThanOrEqual(results[i].distance);
+        expect(results[i - 1].distance).toBeLessThanOrEqual(
+          results[i].distance,
+        );
       }
 
       // Verify all distances are within maxDistance
@@ -142,5 +144,5 @@ fcTest.prop({ documents: arbitraryDocuments })(
       }
     });
   },
-  10000
+  10000,
 );
