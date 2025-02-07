@@ -16,7 +16,7 @@ async function removePointByKey(
     maxLevel: number;
     levelMod: number;
     maxCells: number;
-  }
+  },
 ): Promise<boolean> {
   const existing = await ctx.db
     .query("points")
@@ -35,7 +35,7 @@ async function removePointByKey(
       .unique();
     if (!existingCell) {
       throw new Error(
-        `Invariant failed: Missing cell ${cell} for point ${existing._id}`
+        `Invariant failed: Missing cell ${cell} for point ${existing._id}`,
       );
     }
     await ctx.db.delete(existingCell._id);
@@ -50,19 +50,19 @@ async function removePointByKey(
           q
             .eq("filterKey", filterKey)
             .eq("filterValue", filterValue)
-            .eq("tupleKey", tupleKey)
+            .eq("tupleKey", tupleKey),
         )
         .unique();
       if (!existingFilterKey) {
         throw new Error(
-          `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`
+          `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`,
         );
       }
       await ctx.db.delete(existingFilterKey._id);
       await approximateCounter.decrement(
         ctx,
         existing._id,
-        filterCounterKey(filterKey, filterValue)
+        filterCounterKey(filterKey, filterValue),
       );
     }
   }
@@ -84,7 +84,7 @@ function s2Cells(
     maxLevel: number;
     levelMod: number;
     maxCells: number;
-  }
+  },
 ): string[] {
   const leafCellID = s2.cellIDFromPoint(point);
   const cells = [];
@@ -167,66 +167,3 @@ export const remove = mutation({
     return success;
   },
 });
-
-async function removePointByKey(
-  ctx: MutationCtx,
-  key: string,
-  opts: {
-    minLevel: number;
-    maxLevel: number;
-    levelMod: number;
-    maxCells: number;
-  },
-  s2: S2Bindings
-): Promise<{ success: boolean; existing?: any }> {
-  const existing = await ctx.db
-    .query("points")
-    .withIndex("key", (q) => q.eq("key", key))
-    .first();
-  if (!existing) {
-    return { success: false };
-  }
-
-  const cells = s2Cells(s2, existing.coordinates, opts);
-  const tupleKey = encodeTupleKey(existing.sortKey, existing._id);
-  for (const cell of cells) {
-    const existingCell = await ctx.db
-      .query("pointsByCell")
-      .withIndex("cell", (q) => q.eq("cell", cell).eq("tupleKey", tupleKey))
-      .unique();
-    if (!existingCell) {
-      throw new Error(
-        `Invariant failed: Missing cell ${cell} for point ${existing._id}`
-      );
-    }
-    await ctx.db.delete(existingCell._id);
-    await approximateCounter.decrement(ctx, existing._id, cellCounterKey(cell));
-  }
-  for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
-    const valueArray = filterDoc instanceof Array ? filterDoc : [filterDoc];
-    for (const filterValue of valueArray) {
-      const existingFilterKey = await ctx.db
-        .query("pointsByFilterKey")
-        .withIndex("filterKey", (q) =>
-          q
-            .eq("filterKey", filterKey)
-            .eq("filterValue", filterValue)
-            .eq("tupleKey", tupleKey)
-        )
-        .unique();
-      if (!existingFilterKey) {
-        throw new Error(
-          `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`
-        );
-      }
-      await ctx.db.delete(existingFilterKey._id);
-      await approximateCounter.decrement(
-        ctx,
-        existing._id,
-        filterCounterKey(filterKey, filterValue)
-      );
-    }
-  }
-  await ctx.db.delete(existing._id);
-  return { success: true, existing };
-}
