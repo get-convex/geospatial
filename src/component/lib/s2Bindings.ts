@@ -143,7 +143,9 @@ export class S2Bindings {
   cellIDChildren(cellID: CellID, level: number): CellID[] {
     const len = this.exports.cellIDChildren(cellID, level);
     if (len < 0) {
-      throw new Error(`Failed to get cell ID children for ${cellID} at level ${level}`);
+      throw new Error(
+        `Failed to get cell ID children for ${cellID} at level ${level}`,
+      );
     }
     const ptr = this.exports.cellsBufferPtr();
     const wasmMemory = new Uint8Array(this.exports.memory.buffer);

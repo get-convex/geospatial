@@ -29,7 +29,8 @@ export class ClosestPointQuery {
   ) {
     this.toProcess = new Heap<CellCandidate>((a, b) => a.distance - b.distance);
     this.results = new Heap<Result>((a, b) => b.distance - a.distance);
-    this.maxDistanceChordAngle = this.maxDistance && this.s2.metersToChordAngle(this.maxDistance);
+    this.maxDistanceChordAngle =
+      this.maxDistance && this.s2.metersToChordAngle(this.maxDistance);
 
     for (const cellID of this.s2.initialCells(this.minLevel)) {
       const distance = this.s2.minDistanceToCell(this.point, cellID);
@@ -73,7 +74,9 @@ export class ClosestPointQuery {
           .query("pointsByCell")
           .withIndex("cell", (q) => q.eq("cell", cellIDToken))
           .collect();
-        this.logger.debug(`Found ${pointEntries.length} points in cell ${cellIDToken}`);
+        this.logger.debug(
+          `Found ${pointEntries.length} points in cell ${cellIDToken}`,
+        );
         const pointIds = pointEntries.map(
           (entry) => decodeTupleKey(entry.tupleKey).pointId,
         );
@@ -148,7 +151,10 @@ export class ClosestPointQuery {
   distanceThreshold(): ChordAngle | undefined {
     const worstEntry = this.results.peek();
     if (worstEntry && this.results.size() >= this.maxResults) {
-      if (this.maxDistanceChordAngle && worstEntry.distance > this.maxDistanceChordAngle) {
+      if (
+        this.maxDistanceChordAngle &&
+        worstEntry.distance > this.maxDistanceChordAngle
+      ) {
         throw new Error("Max distance exceeded by entry in heap?");
       }
       return worstEntry.distance;
