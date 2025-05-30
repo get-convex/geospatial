@@ -7,7 +7,7 @@
     "email": "support@convex.dev",
     "url": "https://github.com/get-convex/geospatial/issues"
   },
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "Apache-2.0",
   "keywords": [
     "convex",
@@ -62,7 +62,7 @@
     "heap-js": "^2.5.0"
   },
   "peerDependencies": {
-    "convex": "~1.16.5 || >=1.17.0 <1.25.0"
+    "convex": "~1.16.5 || >=1.17.0 <1.35.0"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^4.0.3",
