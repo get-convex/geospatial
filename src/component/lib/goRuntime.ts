@@ -4,12 +4,6 @@
 //
 // This file has been modified for use by the TinyGo compiler.
 
-const enosys = () => {
-  const err = new Error("not implemented");
-  (err as any).code = "ENOSYS";
-  return err;
-};
-
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
 const reinterpretBuf = new DataView(new ArrayBuffer(8));
@@ -113,11 +107,11 @@ export class Go {
       mem().setBigUint64(addr, v_ref, true);
     };
 
-    const loadSlice = (array: any, len: any, cap?: any) => {
+    const loadSlice = (array: any, len: any, _cap?: any) => {
       return new Uint8Array(this._inst.exports.memory.buffer, array, len);
     };
 
-    const loadSliceOfValues = (array: any, len: any, cap: any) => {
+    const loadSliceOfValues = (array: any, len: any, _cap: any) => {
       const a = new Array(len);
       for (let i = 0; i < len; i++) {
         a[i] = loadValue(array + i * 8);
@@ -194,7 +188,7 @@ export class Go {
         },
 
         // func finalizeRef(v ref)
-        "syscall/js.finalizeRef": (v_ref: any) => {
+        "syscall/js.finalizeRef": (_v_ref: any) => {
           // Note: TinyGo does not support finalizers so this should never be
           // called.
           console.error("syscall/js.finalizeRef not implemented");
@@ -367,7 +361,7 @@ export class Go {
           dst_ref: any,
           src_addr: any,
           src_len: any,
-          src_cap: any,
+          _src_cap: any,
         ) => {
           const num_bytes_copied_addr = ret_addr;
           const returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
@@ -440,9 +434,10 @@ export class Go {
   }
 
   _makeFuncWrapper(id: any) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const go = this;
-    return function (this: any) {
-      const event: any = { id: id, this: this, args: arguments };
+    return function (this: any, ...args: any[]) {
+      const event: any = { id: id, this: this, args };
       go._pendingEvent = event;
       go._resume();
       return event.result;
