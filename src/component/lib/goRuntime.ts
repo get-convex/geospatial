@@ -12,8 +12,8 @@ const enosys = () => {
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
-let reinterpretBuf = new DataView(new ArrayBuffer(8));
-var logLine: any[] = [];
+const reinterpretBuf = new DataView(new ArrayBuffer(8));
+let logLine: any[] = [];
 
 export class Go {
   importObject: any;
@@ -53,7 +53,7 @@ export class Go {
     };
 
     const loadValue = (addr: any) => {
-      let v_ref = mem().getBigUint64(addr, true);
+      const v_ref = mem().getBigUint64(addr, true);
       return unboxValue(v_ref);
     };
 
@@ -109,7 +109,7 @@ export class Go {
     };
 
     const storeValue = (addr: any, v: any) => {
-      let v_ref = boxValue(v);
+      const v_ref = boxValue(v);
       mem().setBigUint64(addr, v_ref, true);
     };
 
@@ -143,19 +143,19 @@ export class Go {
           let nwritten = 0;
           if (fd == 1) {
             for (let iovs_i = 0; iovs_i < iovs_len; iovs_i++) {
-              let iov_ptr = iovs_ptr + iovs_i * 8; // assuming wasm32
-              let ptr = mem().getUint32(iov_ptr + 0, true);
-              let len = mem().getUint32(iov_ptr + 4, true);
+              const iov_ptr = iovs_ptr + iovs_i * 8; // assuming wasm32
+              const ptr = mem().getUint32(iov_ptr + 0, true);
+              const len = mem().getUint32(iov_ptr + 4, true);
               nwritten += len;
               for (let i = 0; i < len; i++) {
-                let c = mem().getUint8(ptr + i);
+                const c = mem().getUint8(ptr + i);
                 if (c == 13) {
                   // CR
                   // ignore
                 } else if (c == 10) {
                   // LF
                   // write line
-                  let line = decoder.decode(new Uint8Array(logLine));
+                  const line = decoder.decode(new Uint8Array(logLine));
                   logLine = [];
                   console.log(line);
                 } else {
@@ -208,9 +208,9 @@ export class Go {
 
         // func valueGet(v ref, p string) ref
         "syscall/js.valueGet": (v_ref: any, p_ptr: any, p_len: any) => {
-          let prop = loadString(p_ptr, p_len);
-          let v = unboxValue(v_ref);
-          let result = Reflect.get(v, prop);
+          const prop = loadString(p_ptr, p_len);
+          const v = unboxValue(v_ref);
+          const result = Reflect.get(v, prop);
           return boxValue(result);
         },
 
@@ -342,8 +342,8 @@ export class Go {
           dest_cap: any,
           src_ref: any,
         ) => {
-          let num_bytes_copied_addr = ret_addr;
-          let returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
+          const num_bytes_copied_addr = ret_addr;
+          const returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
 
           const dst = loadSlice(dest_addr, dest_len);
           const src = unboxValue(src_ref);
@@ -369,8 +369,8 @@ export class Go {
           src_len: any,
           src_cap: any,
         ) => {
-          let num_bytes_copied_addr = ret_addr;
-          let returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
+          const num_bytes_copied_addr = ret_addr;
+          const returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
 
           const dst = unboxValue(dst_ref);
           const src = loadSlice(src_addr, src_len);
