@@ -96,7 +96,7 @@ export class Intersection implements PointSet {
     if (this.streams.length === 0) {
       return;
     }
-    this.streams[0].seek(tuple);
+    await this.streams[0].seek(tuple);
     await this.goToFirstDoc();
   }
 

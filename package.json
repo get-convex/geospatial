@@ -30,7 +30,7 @@
     "build": "tsc --project ./tsconfig.build.json",
     "build:go": "cd src/s2-bindings && python build.py",
     "typecheck": "tsc --noEmit && tsc -p example && tsc -p example/convex",
-    "lint": "eslint src",
+    "lint": "eslint .",
     "all": "run-p -r 'dev:*' 'test:watch'",
     "test": "vitest run --typecheck",
     "test:watch": "vitest --typecheck --clearScreen false",

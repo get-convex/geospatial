@@ -1,9 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Point } from "@convex-dev/geospatial";
-import { FunctionReturnType } from "convex/server";
-
-type NearestResults = FunctionReturnType<typeof api.example.nearestPoints>;
 
 export function useNearestQuery(point: Point | null, maxResults: number) {
   const results = useQuery(
@@ -13,7 +10,7 @@ export function useNearestQuery(point: Point | null, maxResults: number) {
           point,
           maxRows: maxResults,
         }
-      : "skip"
+      : "skip",
   );
 
   if (!point || !results) {
@@ -29,4 +26,4 @@ export function useNearestQuery(point: Point | null, maxResults: number) {
   }));
 
   return { rows, loading: false };
-} 
+}

@@ -41,6 +41,7 @@ export default [
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-explicit-any": "off",
       "no-unused-vars": "off",
+      "no-constant-condition": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
@@ -77,6 +78,7 @@ export default [
       ],
       "@typescript-eslint/no-explicit-any": "off",
       "no-unused-vars": "off",
+      "react-hooks/refs": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {
