@@ -1,5 +1,3 @@
-/* prettier-ignore-start */
-
 /* eslint-disable */
 /**
  * Generated `api` utility.
@@ -36,6 +34,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+
 /**
  * A utility for referencing Convex functions in your app's API.
  *
@@ -66,152 +65,14 @@ declare const fullApi: ApiFromModules<{
   "streams/zigzag": typeof streams_zigzag;
   types: typeof types;
 }>;
-export type Mounts = {
-  document: {
-    get: FunctionReference<
-      "query",
-      "public",
-      { key: string },
-      {
-        coordinates: { latitude: number; longitude: number };
-        filterKeys: Record<
-          string,
-          | string
-          | number
-          | boolean
-          | null
-          | bigint
-          | Array<string | number | boolean | null | bigint>
-        >;
-        key: string;
-        sortKey: number;
-      } | null
-    >;
-    insert: FunctionReference<
-      "mutation",
-      "public",
-      {
-        document: {
-          coordinates: { latitude: number; longitude: number };
-          filterKeys: Record<
-            string,
-            | string
-            | number
-            | boolean
-            | null
-            | bigint
-            | Array<string | number | boolean | null | bigint>
-          >;
-          key: string;
-          sortKey: number;
-        };
-        levelMod: number;
-        maxCells: number;
-        maxLevel: number;
-        minLevel: number;
-      },
-      null
-    >;
-    remove: FunctionReference<
-      "mutation",
-      "public",
-      {
-        key: string;
-        levelMod: number;
-        maxCells: number;
-        maxLevel: number;
-        minLevel: number;
-      },
-      boolean
-    >;
-  };
-  query: {
-    debugCells: FunctionReference<
-      "query",
-      "public",
-      {
-        levelMod: number;
-        maxCells: number;
-        maxLevel: number;
-        minLevel: number;
-        rectangle: { east: number; north: number; south: number; west: number };
-      },
-      Array<{
-        token: string;
-        vertices: Array<{ latitude: number; longitude: number }>;
-      }>
-    >;
-    execute: FunctionReference<
-      "query",
-      "public",
-      {
-        cursor?: string;
-        levelMod: number;
-        logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-        maxCells: number;
-        maxLevel: number;
-        minLevel: number;
-        query: {
-          filtering: Array<{
-            filterKey: string;
-            filterValue: string | number | boolean | null | bigint;
-            occur: "should" | "must";
-          }>;
-          maxResults: number;
-          rectangle: {
-            east: number;
-            north: number;
-            south: number;
-            west: number;
-          };
-          sorting: {
-            interval: { endExclusive?: number; startInclusive?: number };
-          };
-        };
-      },
-      {
-        nextCursor?: string;
-        results: Array<{
-          coordinates: { latitude: number; longitude: number };
-          key: string;
-        }>;
-      }
-    >;
-    nearestPoints: FunctionReference<
-      "query",
-      "public",
-      {
-        levelMod: number;
-        logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
-        maxDistance?: number;
-        maxLevel: number;
-        maxResults: number;
-        minLevel: number;
-        nextCursor?: string;
-        point: { latitude: number; longitude: number };
-      },
-      Array<{
-        coordinates: { latitude: number; longitude: number };
-        distance: number;
-        key: string;
-      }>
-    >;
-  };
-};
-// For now fullApiWithMounts is only fullApi which provides
-// jump-to-definition in component client code.
-// Use Mounts for the same type without the inference.
-declare const fullApiWithMounts: typeof fullApi;
 
 export declare const api: FilterApi<
-  typeof fullApiWithMounts,
+  typeof fullApi,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApiWithMounts,
+  typeof fullApi,
   FunctionReference<any, "internal">
 >;
 
 export declare const components: {};
-
-/* prettier-ignore-end */
