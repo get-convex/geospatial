@@ -1,6 +1,6 @@
 import { Heap } from "heap-js";
-import { TupleKey } from "../lib/tupleKey.js";
-import { PointSet } from "./zigzag.js";
+import type { TupleKey } from "../lib/tupleKey.js";
+import type { PointSet } from "./zigzag.js";
 
 type HeapEntry = {
   tuple: TupleKey;

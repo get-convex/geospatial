@@ -1,5 +1,5 @@
 import type { Rectangle } from "../component/types.js";
-import { GeospatialDocument, FilterValue, FilterObject } from "./index.js";
+import type { GeospatialDocument, FilterValue, FilterObject } from "./index.js";
 
 /**
  * A query for keys within a given shape.
