@@ -251,14 +251,17 @@ const example = query({
       ctx,
       { latitude: 40.7813, longitude: -73.9737 },
       maxResults,
-      maxDistance,
+      {
+        maxDistance,
+        filter: (q) => q.eq("category", "coffee"),
+      },
     );
     return result;
   },
 });
 ```
 
-The `maxDistance` parameter is optional, but providing it can greatly speed up searching the index.
+The fourth argument can either be a numeric `maxDistance` (for backwards compatibility) or an options object. When you pass an options object you can combine `maxDistance` with the same filter builder used by `query`, including `eq`, `in`, `gte`, and `lt` conditions. Filtering helps constrain the search space and can speed up lookups.
 
 ## Example
 

@@ -274,6 +274,10 @@ export const nearestPoints = query({
     maxLevel: v.number(),
     levelMod: v.number(),
     nextCursor: v.optional(v.string()),
+    filtering: v.array(equalityCondition),
+    sorting: v.object({
+      interval,
+    }),
     logLevel,
   },
   returns: v.array(queryResultWithDistance),
@@ -292,6 +296,8 @@ export const nearestPoints = query({
       args.minLevel,
       args.maxLevel,
       args.levelMod,
+      args.filtering,
+      args.sorting.interval,
     );
     const results = await query.execute(ctx);
     return results;

@@ -172,6 +172,14 @@ export declare const components: {
           minLevel: number;
           nextCursor?: string;
           point: { latitude: number; longitude: number };
+          filtering: Array<{
+            filterKey: string;
+            filterValue: string | number | boolean | null | bigint;
+            occur: "should" | "must";
+          }>;
+          sorting: {
+            interval: { endExclusive?: number; startInclusive?: number };
+          };
         },
         Array<{
           coordinates: { latitude: number; longitude: number };

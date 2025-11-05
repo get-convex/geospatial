@@ -39,6 +39,13 @@ export type GeospatialDocument<
   sortKey: number;
 };
 
+export type QueryNearestOptions<
+  Doc extends GeospatialDocument = GeospatialDocument,
+> = {
+  maxDistance?: number;
+  filter?: NonNullable<GeospatialQuery<Doc>["filter"]>;
+};
+
 export interface GeospatialIndexOptions {
   /**
    * The minimum S2 cell level to use when querying. Defaults to 4.
@@ -211,23 +218,50 @@ export class GeospatialIndex<
    * @param ctx - The Convex query context.
    * @param point - The point to query for.
    * @param maxResults - The maximum number of results to return.
-   * @param maxDistance - The maximum distance to return results within in meters.
+   * @param maxDistanceOrOptions - Either the maximum distance in meters or an options object containing filtering logic.
+   * @param maybeOptions - Additional options when the maximum distance is provided separately.
    * @returns - An array of objects with the key-coordinate pairs and their distance from the query point in meters.
    */
   async queryNearest(
     ctx: QueryCtx,
     point: Point,
     maxResults: number,
-    maxDistance?: number,
+    maxDistanceOrOptions?:
+      | number
+      | QueryNearestOptions<GeospatialDocument<Key, Filters>>,
+    maybeOptions?: QueryNearestOptions<GeospatialDocument<Key, Filters>>,
   ) {
+    let options:
+      | QueryNearestOptions<GeospatialDocument<Key, Filters>>
+      | undefined;
+    let maxDistance: number | undefined;
+    if (
+      typeof maxDistanceOrOptions === "object" &&
+      maxDistanceOrOptions !== null
+    ) {
+      options = maxDistanceOrOptions;
+    } else {
+      maxDistance = maxDistanceOrOptions;
+      options = maybeOptions;
+    }
+
+    const filterBuilder = new FilterBuilderImpl<
+      GeospatialDocument<Key, Filters>
+    >();
+    if (options?.filter) {
+      options.filter(filterBuilder);
+    }
+
     const resp = await ctx.runQuery(this.component.query.nearestPoints, {
       point,
-      maxDistance,
+      maxDistance: options?.maxDistance ?? maxDistance,
       maxResults,
       minLevel: this.minLevel,
       maxLevel: this.maxLevel,
       levelMod: this.levelMod,
       logLevel: this.logLevel,
+      filtering: filterBuilder.filterConditions,
+      sorting: { interval: filterBuilder.interval ?? {} },
     });
     return resp as { key: Key; coordinates: Point; distance: number }[];
   }

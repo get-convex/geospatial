@@ -1,12 +1,20 @@
 import { Heap } from "heap-js";
+import type { Primitive } from "../types.js";
 import { ChordAngle, Meters, Point } from "../types.js";
-import { Id } from "../_generated/dataModel.js";
+import { Doc, Id } from "../_generated/dataModel.js";
 import { S2Bindings } from "./s2Bindings.js";
 import { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
 import { cellCounterKey } from "../streams/cellRange.js";
 import { decodeTupleKey } from "./tupleKey.js";
 import { Logger } from "./logging.js";
+import type { Interval } from "./interval.js";
+
+type FilterCondition = {
+  filterKey: string;
+  filterValue: Primitive;
+  occur: "must" | "should";
+};
 
 export class ClosestPointQuery {
   // Min-heap of cells to process.
@@ -16,6 +24,9 @@ export class ClosestPointQuery {
   results: Heap<Result>;
 
   maxDistanceChordAngle?: ChordAngle;
+  private mustFilters: FilterCondition[];
+  private shouldFilters: FilterCondition[];
+  private sortInterval: Interval;
 
   constructor(
     private s2: S2Bindings,
@@ -26,11 +37,18 @@ export class ClosestPointQuery {
     private minLevel: number,
     private maxLevel: number,
     private levelMod: number,
+    filtering: FilterCondition[] = [],
+    interval: Interval = {},
   ) {
     this.toProcess = new Heap<CellCandidate>((a, b) => a.distance - b.distance);
     this.results = new Heap<Result>((a, b) => b.distance - a.distance);
     this.maxDistanceChordAngle =
       this.maxDistance && this.s2.metersToChordAngle(this.maxDistance);
+    this.mustFilters = filtering.filter((filter) => filter.occur === "must");
+    this.shouldFilters = filtering.filter(
+      (filter) => filter.occur === "should",
+    );
+    this.sortInterval = interval;
 
     for (const cellID of this.s2.initialCells(this.minLevel)) {
       const distance = this.s2.minDistanceToCell(this.point, cellID);
@@ -85,7 +103,9 @@ export class ClosestPointQuery {
           if (!point) {
             throw new Error("Point not found");
           }
-          this.addResult(point._id, point.coordinates);
+          if (this.matchesFilters(point)) {
+            this.addResult(point._id, point.coordinates);
+          }
         }
       }
     }
@@ -99,6 +119,9 @@ export class ClosestPointQuery {
       if (!point) {
         throw new Error("Point not found");
       }
+      if (!this.matchesFilters(point)) {
+        continue;
+      }
       results.push({
         key: point.key,
         coordinates: point.coordinates,
@@ -106,6 +129,53 @@ export class ClosestPointQuery {
       });
     }
     return results;
+  }
+
+  private matchesFilters(point: Doc<"points">): boolean {
+    if (
+      this.sortInterval.startInclusive !== undefined &&
+      point.sortKey < this.sortInterval.startInclusive
+    ) {
+      return false;
+    }
+    if (
+      this.sortInterval.endExclusive !== undefined &&
+      point.sortKey >= this.sortInterval.endExclusive
+    ) {
+      return false;
+    }
+
+    for (const filter of this.mustFilters) {
+      if (!this.pointMatchesCondition(point, filter)) {
+        return false;
+      }
+    }
+
+    if (this.shouldFilters.length > 0) {
+      let anyMatch = false;
+      for (const filter of this.shouldFilters) {
+        if (this.pointMatchesCondition(point, filter)) {
+          anyMatch = true;
+          break;
+        }
+      }
+      if (!anyMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private pointMatchesCondition(point: Doc<"points">, filter: FilterCondition) {
+    const value = point.filterKeys[filter.filterKey];
+    if (value === undefined) {
+      return false;
+    }
+    if (Array.isArray(value)) {
+      return value.some((candidate) => candidate === filter.filterValue);
+    }
+    return value === filter.filterValue;
   }
 
   addCandidate(cellID: bigint, level: number, distance: ChordAngle) {
