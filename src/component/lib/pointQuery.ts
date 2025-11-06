@@ -5,15 +5,10 @@ import { Doc, Id } from "../_generated/dataModel.js";
 import { S2Bindings } from "./s2Bindings.js";
 import { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
-import { CellRange, cellCounterKey } from "../streams/cellRange.js";
-import { FilterKeyRange } from "../streams/filterKeyRange.js";
-import { Intersection } from "../streams/intersection.js";
-import { Union } from "../streams/union.js";
-import { decodeTupleKey } from "./tupleKey.js";
+import { cellCounterKey } from "../streams/cellRange.js";
+import { decodeTupleKey, encodeBound } from "./tupleKey.js";
 import { Logger } from "./logging.js";
 import type { Interval } from "./interval.js";
-import type { PointSet, Stats } from "../streams/zigzag.js";
-import { PREFETCH_SIZE } from "../streams/constants.js";
 
 type FilterCondition = {
   filterKey: string;
@@ -92,27 +87,46 @@ export class ClosestPointQuery {
           this.addCandidate(cellID, nextLevel, distance);
         }
       } else {
-        const stats: Stats = {
-          cells: 1,
-          queriesIssued: 0,
-          rowsRead: 0,
-          rowsPostFiltered: 0,
-        };
-        const stream = this.buildStreamForCell(ctx, cellIDToken, stats);
-        let tuple = await stream.current();
-        while (tuple !== null) {
-          const { pointId } = decodeTupleKey(tuple);
+        const pointEntries = await ctx.db
+          .query("pointsByCell")
+          .withIndex("cell", (q) => {
+            const withCell = q.eq("cell", cellIDToken);
+            const withStart =
+              this.sortInterval.startInclusive !== undefined
+                ? withCell.gte(
+                    "tupleKey",
+                    encodeBound(this.sortInterval.startInclusive),
+                  )
+                : withCell;
+            const withEnd =
+              this.sortInterval.endExclusive !== undefined
+                ? withStart.lt(
+                    "tupleKey",
+                    encodeBound(this.sortInterval.endExclusive),
+                  )
+                : withStart;
+            return withEnd;
+          })
+          .collect();
+        this.logger.debug(
+          `Found ${pointEntries.length} points in cell ${cellIDToken}`,
+        );
+        for (const entry of pointEntries) {
+          const { pointId, sortKey } = decodeTupleKey(entry.tupleKey);
+          if (!this.withinSortInterval(sortKey)) {
+            continue;
+          }
+          if (!(await this.passesFilterIndexes(ctx, entry.tupleKey))) {
+            continue;
+          }
           const point = await ctx.db.get(pointId);
           if (!point) {
             throw new Error("Point not found");
           }
-          if (this.matchesFilters(point)) {
-            this.addResult(point._id, point.coordinates);
-          } else {
-            stats.rowsPostFiltered++;
+          if (!this.matchesFilters(point)) {
+            continue;
           }
-          await stream.advance();
-          tuple = await stream.current();
+          this.addResult(point._id, point.coordinates);
         }
       }
     }
@@ -138,63 +152,59 @@ export class ClosestPointQuery {
     return results;
   }
 
-  private buildStreamForCell(
-    ctx: QueryCtx,
-    cellIDToken: string,
-    stats: Stats,
-  ): PointSet {
-    const ranges: PointSet[] = [
-      new CellRange(
-        ctx,
-        this.logger,
-        cellIDToken,
-        undefined,
-        this.sortInterval,
-        PREFETCH_SIZE,
-        stats,
-      ),
-    ];
-
-    for (const filter of this.mustFilters) {
-      ranges.push(
-        new FilterKeyRange(
-          ctx,
-          this.logger,
-          filter.filterKey,
-          filter.filterValue,
-          undefined,
-          this.sortInterval,
-          PREFETCH_SIZE,
-          stats,
-        ),
-      );
+  private withinSortInterval(sortKey: number): boolean {
+    if (
+      this.sortInterval.startInclusive !== undefined &&
+      sortKey < this.sortInterval.startInclusive
+    ) {
+      return false;
     }
+    if (
+      this.sortInterval.endExclusive !== undefined &&
+      sortKey >= this.sortInterval.endExclusive
+    ) {
+      return false;
+    }
+    return true;
+  }
 
-    if (this.shouldFilters.length > 0) {
-      const shouldStreams = this.shouldFilters.map(
-        (filter) =>
-          new FilterKeyRange(
-            ctx,
-            this.logger,
-            filter.filterKey,
-            filter.filterValue,
-            undefined,
-            this.sortInterval,
-            PREFETCH_SIZE,
-            stats,
-          ),
-      );
-      if (shouldStreams.length === 1) {
-        ranges.push(shouldStreams[0]);
-      } else if (shouldStreams.length > 1) {
-        ranges.push(new Union(shouldStreams));
+  private async passesFilterIndexes(
+    ctx: QueryCtx,
+    tupleKey: string,
+  ): Promise<boolean> {
+    for (const filter of this.mustFilters) {
+      if (!(await this.hasFilterEntry(ctx, filter, tupleKey))) {
+        return false;
       }
     }
 
-    if (ranges.length === 1) {
-      return ranges[0];
+    if (this.shouldFilters.length === 0) {
+      return true;
     }
-    return new Intersection(ranges);
+
+    for (const filter of this.shouldFilters) {
+      if (await this.hasFilterEntry(ctx, filter, tupleKey)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private async hasFilterEntry(
+    ctx: QueryCtx,
+    filter: FilterCondition,
+    tupleKey: string,
+  ): Promise<boolean> {
+    const match = await ctx.db
+      .query("pointsByFilterKey")
+      .withIndex("filterKey", (q) =>
+        q
+          .eq("filterKey", filter.filterKey)
+          .eq("filterValue", filter.filterValue)
+          .eq("tupleKey", tupleKey),
+      )
+      .unique();
+    return match !== null;
   }
 
   private matchesFilters(point: Doc<"points">): boolean {
