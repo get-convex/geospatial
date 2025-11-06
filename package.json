@@ -23,8 +23,8 @@
   "scripts": {
     "build": "npm run build:esm && npm run build:cjs",
     "build:go": "cd src/s2-bindings && python build.py",
-    "build:esm": "tsc --project ./esm.json && echo -e '{\n  \"type\": \"module\"\n}' > dist/esm/package.json",
-    "build:cjs": "tsc --project ./commonjs.json && echo -e '{\n  \"type\": \"commonjs\"\n}' > dist/commonjs/package.json",
+    "build:esm": "tsc --project ./esm.json && node -e \"require('fs').writeFileSync('dist/esm/package.json', JSON.stringify({type:'module'}, null, 2) + '\\n')\"",
+    "build:cjs": "tsc --project ./commonjs.json && node -e \"require('fs').writeFileSync('dist/commonjs/package.json', JSON.stringify({type:'commonjs'}, null, 2) + '\\n')\"",
     "dev": "cd example; npm run dev",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
