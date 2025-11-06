@@ -1,5 +1,5 @@
 import { TupleKey } from "../lib/tupleKey.js";
-import { PREFETCH_SIZE } from "../query.js";
+import { PREFETCH_SIZE } from "./constants.js";
 import { PointSet } from "./zigzag.js";
 
 export class Intersection implements PointSet {

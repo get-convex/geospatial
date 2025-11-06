@@ -5,10 +5,15 @@ import { Doc, Id } from "../_generated/dataModel.js";
 import { S2Bindings } from "./s2Bindings.js";
 import { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
-import { cellCounterKey } from "../streams/cellRange.js";
+import { CellRange, cellCounterKey } from "../streams/cellRange.js";
+import { FilterKeyRange } from "../streams/filterKeyRange.js";
+import { Intersection } from "../streams/intersection.js";
+import { Union } from "../streams/union.js";
 import { decodeTupleKey } from "./tupleKey.js";
 import { Logger } from "./logging.js";
 import type { Interval } from "./interval.js";
+import type { PointSet, Stats } from "../streams/zigzag.js";
+import { PREFETCH_SIZE } from "../streams/constants.js";
 
 type FilterCondition = {
   filterKey: string;
@@ -87,25 +92,27 @@ export class ClosestPointQuery {
           this.addCandidate(cellID, nextLevel, distance);
         }
       } else {
-        // Query the current cell and add its results in.
-        const pointEntries = await ctx.db
-          .query("pointsByCell")
-          .withIndex("cell", (q) => q.eq("cell", cellIDToken))
-          .collect();
-        this.logger.debug(
-          `Found ${pointEntries.length} points in cell ${cellIDToken}`,
-        );
-        const pointIds = pointEntries.map(
-          (entry) => decodeTupleKey(entry.tupleKey).pointId,
-        );
-        const points = await Promise.all(pointIds.map((id) => ctx.db.get(id)));
-        for (const point of points) {
+        const stats: Stats = {
+          cells: 1,
+          queriesIssued: 0,
+          rowsRead: 0,
+          rowsPostFiltered: 0,
+        };
+        const stream = this.buildStreamForCell(ctx, cellIDToken, stats);
+        let tuple = await stream.current();
+        while (tuple !== null) {
+          const { pointId } = decodeTupleKey(tuple);
+          const point = await ctx.db.get(pointId);
           if (!point) {
             throw new Error("Point not found");
           }
           if (this.matchesFilters(point)) {
             this.addResult(point._id, point.coordinates);
+          } else {
+            stats.rowsPostFiltered++;
           }
+          await stream.advance();
+          tuple = await stream.current();
         }
       }
     }
@@ -129,6 +136,65 @@ export class ClosestPointQuery {
       });
     }
     return results;
+  }
+
+  private buildStreamForCell(
+    ctx: QueryCtx,
+    cellIDToken: string,
+    stats: Stats,
+  ): PointSet {
+    const ranges: PointSet[] = [
+      new CellRange(
+        ctx,
+        this.logger,
+        cellIDToken,
+        undefined,
+        this.sortInterval,
+        PREFETCH_SIZE,
+        stats,
+      ),
+    ];
+
+    for (const filter of this.mustFilters) {
+      ranges.push(
+        new FilterKeyRange(
+          ctx,
+          this.logger,
+          filter.filterKey,
+          filter.filterValue,
+          undefined,
+          this.sortInterval,
+          PREFETCH_SIZE,
+          stats,
+        ),
+      );
+    }
+
+    if (this.shouldFilters.length > 0) {
+      const shouldStreams = this.shouldFilters.map(
+        (filter) =>
+          new FilterKeyRange(
+            ctx,
+            this.logger,
+            filter.filterKey,
+            filter.filterValue,
+            undefined,
+            this.sortInterval,
+            PREFETCH_SIZE,
+            stats,
+          ),
+      );
+      if (shouldStreams.length === 1) {
+        ranges.push(shouldStreams[0]);
+      } else if (shouldStreams.length > 1) {
+        ranges.push(new Union(shouldStreams));
+      }
+    }
+
+    if (ranges.length === 1) {
+      return ranges[0];
+    }
+    return new Intersection(ranges);
   }
 
   private matchesFilters(point: Doc<"points">): boolean {

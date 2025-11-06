@@ -252,7 +252,7 @@ const example = query({
       { latitude: 40.7813, longitude: -73.9737 },
       maxResults,
       {
-        maxDistance,
+      maxDistance,
         filter: (q) => q.eq("category", "coffee"),
       },
     );
@@ -261,7 +261,7 @@ const example = query({
 });
 ```
 
-The fourth argument can either be a numeric `maxDistance` (for backwards compatibility) or an options object. When you pass an options object you can combine `maxDistance` with the same filter builder used by `query`, including `eq`, `in`, `gte`, and `lt` conditions. Filtering helps constrain the search space and can speed up lookups.
+The fourth argument can either be a numeric `maxDistance` (for backwards compatibility) or an options object. When you pass an options object you can combine `maxDistance` with the same filter builder used by `query`, including `eq`, `in`, `gte`, and `lt` conditions. These filters are enforced through the indexed `pointsByFilterKey` range before documents are loaded, so the database does the heavy lifting and the query avoids reading unrelated points. Pairing that with a sensible `maxDistance` further constrains the search space and can speed up lookups.
 
 ## Example
 

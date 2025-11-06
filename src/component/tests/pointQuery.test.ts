@@ -16,8 +16,14 @@ const opts = {
   maxCells: 8,
 };
 
+const testSchema = schema as unknown as NonNullable<
+  Parameters<typeof convexTest>[0]
+>;
+const testModules = modules as NonNullable<Parameters<typeof convexTest>[1]>;
+type ClosestQueryCtx = Parameters<ClosestPointQuery["execute"]>[0];
+
 test("closest point query - basic functionality", async () => {
-  const t = convexTest(schema, modules);
+  const t = await convexTest(testSchema, testModules);
   const s2 = await S2Bindings.load();
   const logger = createLogger("INFO");
 
@@ -52,6 +58,7 @@ test("closest point query - basic functionality", async () => {
   }
 
   await t.run(async (ctx) => {
+    const queryCtx = ctx as unknown as ClosestQueryCtx;
     // Test finding closest point to origin
     const query1 = new ClosestPointQuery(
       s2,
@@ -63,7 +70,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result1 = await query1.execute(ctx);
+    const result1 = await query1.execute(queryCtx);
     expect(result1.length).toBe(1);
     expect(result1[0].key).toBe("point1");
     expect(result1[0].distance).toBeLessThan(1); // Should be very close to 0
@@ -79,7 +86,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result2 = await query2.execute(ctx);
+    const result2 = await query2.execute(queryCtx);
     expect(result2.length).toBe(2);
     expect(result2[0].key).toBe("point2");
     expect(result2[1].key).toBe("point1");
@@ -96,7 +103,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result3 = await query3.execute(ctx);
+    const result3 = await query3.execute(queryCtx);
     expect(result3.length).toBe(1);
     expect(result3[0].key).toBe("point1");
 
@@ -118,7 +125,7 @@ test("closest point query - basic functionality", async () => {
         },
       ],
     );
-    const result4 = await query4.execute(ctx);
+    const result4 = await query4.execute(queryCtx);
     expect(result4.length).toBe(2);
     expect(result4.map((r) => r.key).sort()).toEqual(["point1", "point3"]);
 
@@ -140,7 +147,7 @@ test("closest point query - basic functionality", async () => {
         },
       ],
     );
-    const result5 = await query5.execute(ctx);
+    const result5 = await query5.execute(queryCtx);
     expect(result5.length).toBe(1);
     expect(result5[0].key).toBe("point2");
 
@@ -157,16 +164,45 @@ test("closest point query - basic functionality", async () => {
       [],
       { startInclusive: 3 },
     );
-    const result6 = await query6.execute(ctx);
+    const result6 = await query6.execute(queryCtx);
     expect(result6.length).toBe(1);
     expect(result6[0].key).toBe("point3");
+
+    // Test multiple should filters
+    const query7 = new ClosestPointQuery(
+      s2,
+      logger,
+      { latitude: 0, longitude: 0 },
+      10000000,
+      3,
+      opts.minLevel,
+      opts.maxLevel,
+      opts.levelMod,
+      [
+        {
+          occur: "should",
+          filterKey: "category",
+          filterValue: "tea",
+        },
+        {
+          occur: "should",
+          filterKey: "category",
+          filterValue: "coffee",
+        },
+      ],
+    );
+    const result7 = await query7.execute(queryCtx);
+    expect(result7.length).toBe(3);
+    expect(new Set(result7.map((r) => r.key))).toEqual(
+      new Set(["point1", "point2", "point3"]),
+    );
   });
 });
 
 fcTest.prop({ documents: arbitraryDocuments })(
   "closest point query - property based testing",
   async ({ documents }) => {
-    const t = convexTest(schema, modules);
+    const t = await convexTest(testSchema, testModules);
     const s2 = await S2Bindings.load();
     const logger = createLogger("INFO");
 
@@ -179,6 +215,7 @@ fcTest.prop({ documents: arbitraryDocuments })(
     }
 
     await t.run(async (ctx) => {
+      const queryCtx = ctx as unknown as ClosestQueryCtx;
       const testPoint = { latitude: 0, longitude: 0 };
       const query = new ClosestPointQuery(
         s2,
@@ -190,7 +227,7 @@ fcTest.prop({ documents: arbitraryDocuments })(
         opts.maxLevel,
         opts.levelMod,
       );
-      const results = await query.execute(ctx);
+      const results = await query.execute(queryCtx);
 
       // Verify results are ordered by distance
       for (let i = 1; i < results.length; i++) {
