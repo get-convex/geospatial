@@ -27,6 +27,8 @@ export class ClosestPointQuery {
   private mustFilters: FilterCondition[];
   private shouldFilters: FilterCondition[];
   private sortInterval: Interval;
+  private readonly checkFilters: boolean;
+  private static readonly CELL_BATCH_SIZE = 64;
 
   constructor(
     private s2: S2Bindings,
@@ -49,6 +51,8 @@ export class ClosestPointQuery {
       (filter) => filter.occur === "should",
     );
     this.sortInterval = interval;
+    this.checkFilters =
+      this.mustFilters.length > 0 || this.shouldFilters.length > 0;
 
     for (const cellID of this.s2.initialCells(this.minLevel)) {
       const distance = this.s2.minDistanceToCell(this.point, cellID);
@@ -87,46 +91,49 @@ export class ClosestPointQuery {
           this.addCandidate(cellID, nextLevel, distance);
         }
       } else {
-        const pointEntries = await ctx.db
-          .query("pointsByCell")
-          .withIndex("cell", (q) => {
-            const withCell = q.eq("cell", cellIDToken);
-            const withStart =
-              this.sortInterval.startInclusive !== undefined
-                ? withCell.gte(
-                    "tupleKey",
-                    encodeBound(this.sortInterval.startInclusive),
-                  )
-                : withCell;
-            const withEnd =
-              this.sortInterval.endExclusive !== undefined
-                ? withStart.lt(
-                    "tupleKey",
-                    encodeBound(this.sortInterval.endExclusive),
-                  )
-                : withStart;
-            return withEnd;
-          })
-          .collect();
-        this.logger.debug(
-          `Found ${pointEntries.length} points in cell ${cellIDToken}`,
-        );
-        for (const entry of pointEntries) {
-          const { pointId, sortKey } = decodeTupleKey(entry.tupleKey);
-          if (!this.withinSortInterval(sortKey)) {
-            continue;
+        let lastTupleKey: string | undefined = undefined;
+        while (true) {
+          if (this.shouldStopProcessingCell(candidate.distance)) {
+            break;
           }
-          if (!(await this.passesFilterIndexes(ctx, entry.tupleKey))) {
-            continue;
+          const pointEntries = await this.fetchCellBatch(
+            ctx,
+            cellIDToken,
+            lastTupleKey,
+          );
+          if (pointEntries.length === 0) {
+            break;
           }
-          const point = await ctx.db.get(pointId);
-          if (!point) {
-            throw new Error("Point not found");
+          this.logger.debug(
+            `Processing batch of ${pointEntries.length} points in cell ${cellIDToken}`,
+          );
+          for (const entry of pointEntries) {
+            if (this.shouldStopProcessingCell(candidate.distance)) {
+              break;
+            }
+            const { pointId, sortKey } = decodeTupleKey(entry.tupleKey);
+            if (!this.withinSortInterval(sortKey)) {
+              continue;
+            }
+            if (
+              this.checkFilters &&
+              !(await this.passesFilterIndexes(ctx, entry.tupleKey))
+            ) {
+              continue;
+            }
+            const point = await ctx.db.get(pointId);
+            if (!point) {
+              throw new Error("Point not found");
+            }
+            if (!this.matchesFilters(point)) {
+              continue;
+            }
+            this.addResult(point._id, point.coordinates);
           }
-          if (!this.matchesFilters(point)) {
-            continue;
+          if (pointEntries.length < ClosestPointQuery.CELL_BATCH_SIZE) {
+            break;
           }
-          this.addResult(point._id, point.coordinates);
+          lastTupleKey = pointEntries[pointEntries.length - 1].tupleKey;
         }
       }
     }
@@ -150,6 +157,17 @@ export class ClosestPointQuery {
       });
     }
     return results;
+  }
+
+  private shouldStopProcessingCell(candidateDistance: ChordAngle): boolean {
+    if (this.results.size() < this.maxResults) {
+      return false;
+    }
+    const threshold = this.distanceThreshold();
+    if (threshold === undefined) {
+      return false;
+    }
+    return threshold <= candidateDistance;
   }
 
   private withinSortInterval(sortKey: number): boolean {
@@ -205,6 +223,41 @@ export class ClosestPointQuery {
       )
       .unique();
     return match !== null;
+  }
+
+  private async fetchCellBatch(
+    ctx: QueryCtx,
+    cellIDToken: string,
+    lastTupleKey: string | undefined,
+  ) {
+    const entries = await ctx.db
+      .query("pointsByCell")
+      .withIndex("cell", (q) => {
+        const withCell = q.eq("cell", cellIDToken);
+        let withStart;
+        if (lastTupleKey !== undefined) {
+          withStart = withCell.gt("tupleKey", lastTupleKey);
+        } else if (this.sortInterval.startInclusive !== undefined) {
+          withStart = withCell.gte(
+            "tupleKey",
+            encodeBound(this.sortInterval.startInclusive),
+          );
+        } else {
+          withStart = withCell;
+        }
+        let withEnd;
+        if (this.sortInterval.endExclusive !== undefined) {
+          withEnd = withStart.lt(
+            "tupleKey",
+            encodeBound(this.sortInterval.endExclusive),
+          );
+        } else {
+          withEnd = withStart;
+        }
+        return withEnd;
+      })
+      .take(ClosestPointQuery.CELL_BATCH_SIZE);
+    return entries;
   }
 
   private matchesFilters(point: Doc<"points">): boolean {
