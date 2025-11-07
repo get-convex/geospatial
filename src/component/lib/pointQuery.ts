@@ -29,6 +29,7 @@ export class ClosestPointQuery {
   private sortInterval: Interval;
   private readonly checkFilters: boolean;
   private static readonly CELL_BATCH_SIZE = 64;
+  private static readonly FILTER_SUBDIVIDE_THRESHOLD = 64;
 
   constructor(
     private s2: S2Bindings,
@@ -77,7 +78,13 @@ export class ClosestPointQuery {
       );
       this.logger.debug(`Size estimate for ${cellIDToken}: ${sizeEstimate}`);
 
-      if (canSubdivide && sizeEstimate >= approximateCounter.SAMPLING_RATE) {
+      const shouldSubdivide =
+        canSubdivide &&
+        (sizeEstimate >= approximateCounter.SAMPLING_RATE ||
+          (this.checkFilters &&
+            sizeEstimate >= ClosestPointQuery.FILTER_SUBDIVIDE_THRESHOLD));
+
+      if (shouldSubdivide) {
         this.logger.debug(`Subdividing cell ${candidate.cellID}`);
         const nextLevel = Math.min(
           candidate.level + this.levelMod,
@@ -113,12 +120,6 @@ export class ClosestPointQuery {
             }
             const { pointId, sortKey } = decodeTupleKey(entry.tupleKey);
             if (!this.withinSortInterval(sortKey)) {
-              continue;
-            }
-            if (
-              this.checkFilters &&
-              !(await this.passesFilterIndexes(ctx, entry.tupleKey))
-            ) {
               continue;
             }
             const point = await ctx.db.get(pointId);
@@ -184,45 +185,6 @@ export class ClosestPointQuery {
       return false;
     }
     return true;
-  }
-
-  private async passesFilterIndexes(
-    ctx: QueryCtx,
-    tupleKey: string,
-  ): Promise<boolean> {
-    for (const filter of this.mustFilters) {
-      if (!(await this.hasFilterEntry(ctx, filter, tupleKey))) {
-        return false;
-      }
-    }
-
-    if (this.shouldFilters.length === 0) {
-      return true;
-    }
-
-    for (const filter of this.shouldFilters) {
-      if (await this.hasFilterEntry(ctx, filter, tupleKey)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private async hasFilterEntry(
-    ctx: QueryCtx,
-    filter: FilterCondition,
-    tupleKey: string,
-  ): Promise<boolean> {
-    const match = await ctx.db
-      .query("pointsByFilterKey")
-      .withIndex("filterKey", (q) =>
-        q
-          .eq("filterKey", filter.filterKey)
-          .eq("filterValue", filter.filterValue)
-          .eq("tupleKey", tupleKey),
-      )
-      .unique();
-    return match !== null;
   }
 
   private async fetchCellBatch(
