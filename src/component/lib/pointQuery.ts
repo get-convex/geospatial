@@ -5,8 +5,13 @@ import { Doc, Id } from "../_generated/dataModel.js";
 import { S2Bindings } from "./s2Bindings.js";
 import { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
-import { cellCounterKey } from "../streams/cellRange.js";
-import { decodeTupleKey, encodeBound } from "./tupleKey.js";
+import { cellCounterKey, CellRange } from "../streams/cellRange.js";
+import { FilterKeyRange } from "../streams/filterKeyRange.js";
+import { Union } from "../streams/union.js";
+import { Intersection } from "../streams/intersection.js";
+import type { PointSet, Stats } from "../streams/zigzag.js";
+import { PREFETCH_SIZE } from "../streams/constants.js";
+import { decodeTupleKey } from "./tupleKey.js";
 import { Logger } from "./logging.js";
 import type { Interval } from "./interval.js";
 
@@ -28,8 +33,8 @@ export class ClosestPointQuery {
   private shouldFilters: FilterCondition[];
   private sortInterval: Interval;
   private readonly checkFilters: boolean;
-  private static readonly CELL_BATCH_SIZE = 64;
-  private static readonly FILTER_SUBDIVIDE_THRESHOLD = 64;
+  private static readonly FILTER_SUBDIVIDE_THRESHOLD = 8;
+  private cellStreams = new Map<string, CellStreamState>();
 
   constructor(
     private s2: S2Bindings,
@@ -78,11 +83,14 @@ export class ClosestPointQuery {
       );
       this.logger.debug(`Size estimate for ${cellIDToken}: ${sizeEstimate}`);
 
+      const approxRows = Math.floor(
+        sizeEstimate / approximateCounter.SAMPLING_RATE,
+      );
       const shouldSubdivide =
         canSubdivide &&
-        (sizeEstimate >= approximateCounter.SAMPLING_RATE ||
+        (approxRows >= 1 ||
           (this.checkFilters &&
-            sizeEstimate >= ClosestPointQuery.FILTER_SUBDIVIDE_THRESHOLD));
+            approxRows >= ClosestPointQuery.FILTER_SUBDIVIDE_THRESHOLD));
 
       if (shouldSubdivide) {
         this.logger.debug(`Subdividing cell ${candidate.cellID}`);
@@ -98,43 +106,35 @@ export class ClosestPointQuery {
           this.addCandidate(cellID, nextLevel, distance);
         }
       } else {
-        let lastTupleKey: string | undefined = undefined;
-        while (true) {
+        const streamState = this.getOrCreateStreamForCell(ctx, cellIDToken);
+        while (!streamState.done) {
           if (this.shouldStopProcessingCell(candidate.distance)) {
             break;
           }
-          const pointEntries = await this.fetchCellBatch(
-            ctx,
-            cellIDToken,
-            lastTupleKey,
-          );
-          if (pointEntries.length === 0) {
+          const tupleKey = await streamState.stream.current();
+          if (tupleKey === null) {
+            streamState.done = true;
             break;
           }
-          this.logger.debug(
-            `Processing batch of ${pointEntries.length} points in cell ${cellIDToken}`,
-          );
-          for (const entry of pointEntries) {
-            if (this.shouldStopProcessingCell(candidate.distance)) {
-              break;
+          const { pointId, sortKey } = decodeTupleKey(tupleKey);
+          if (!this.withinSortInterval(sortKey)) {
+            const next = await streamState.stream.advance();
+            if (next === null) {
+              streamState.done = true;
             }
-            const { pointId, sortKey } = decodeTupleKey(entry.tupleKey);
-            if (!this.withinSortInterval(sortKey)) {
-              continue;
-            }
-            const point = await ctx.db.get(pointId);
-            if (!point) {
-              throw new Error("Point not found");
-            }
-            if (!this.matchesFilters(point)) {
-              continue;
-            }
+            continue;
+          }
+          const point = await ctx.db.get(pointId);
+          if (!point) {
+            throw new Error("Point not found");
+          }
+          if (this.matchesFilters(point)) {
             this.addResult(point._id, point.coordinates);
           }
-          if (pointEntries.length < ClosestPointQuery.CELL_BATCH_SIZE) {
-            break;
+          const nextTuple = await streamState.stream.advance();
+          if (nextTuple === null) {
+            streamState.done = true;
           }
-          lastTupleKey = pointEntries[pointEntries.length - 1].tupleKey;
         }
       }
     }
@@ -157,6 +157,7 @@ export class ClosestPointQuery {
         distance: this.s2.chordAngleToMeters(entries[i].distance),
       });
     }
+    this.cellStreams.clear();
     return results;
   }
 
@@ -187,39 +188,67 @@ export class ClosestPointQuery {
     return true;
   }
 
-  private async fetchCellBatch(
+  private getOrCreateStreamForCell(
     ctx: QueryCtx,
     cellIDToken: string,
-    lastTupleKey: string | undefined,
-  ) {
-    const entries = await ctx.db
-      .query("pointsByCell")
-      .withIndex("cell", (q) => {
-        const withCell = q.eq("cell", cellIDToken);
-        let withStart;
-        if (lastTupleKey !== undefined) {
-          withStart = withCell.gt("tupleKey", lastTupleKey);
-        } else if (this.sortInterval.startInclusive !== undefined) {
-          withStart = withCell.gte(
-            "tupleKey",
-            encodeBound(this.sortInterval.startInclusive),
-          );
-        } else {
-          withStart = withCell;
-        }
-        let withEnd;
-        if (this.sortInterval.endExclusive !== undefined) {
-          withEnd = withStart.lt(
-            "tupleKey",
-            encodeBound(this.sortInterval.endExclusive),
-          );
-        } else {
-          withEnd = withStart;
-        }
-        return withEnd;
-      })
-      .take(ClosestPointQuery.CELL_BATCH_SIZE);
-    return entries;
+  ): CellStreamState {
+    const existing = this.cellStreams.get(cellIDToken);
+    if (existing) {
+      return existing;
+    }
+    const stats: Stats = {
+      cells: 1,
+      queriesIssued: 0,
+      rowsRead: 0,
+      rowsPostFiltered: 0,
+    };
+    const ranges: PointSet[] = [
+      new CellRange(
+        ctx,
+        this.logger,
+        cellIDToken,
+        undefined,
+        this.sortInterval,
+        PREFETCH_SIZE,
+        stats,
+      ),
+    ];
+    for (const filter of this.mustFilters) {
+      ranges.push(
+        new FilterKeyRange(
+          ctx,
+          this.logger,
+          filter.filterKey,
+          filter.filterValue,
+          undefined,
+          this.sortInterval,
+          PREFETCH_SIZE,
+          stats,
+        ),
+      );
+    }
+    if (this.shouldFilters.length > 0) {
+      const shouldRanges = this.shouldFilters.map(
+        (filter) =>
+          new FilterKeyRange(
+            ctx,
+            this.logger,
+            filter.filterKey,
+            filter.filterValue,
+            undefined,
+            this.sortInterval,
+            PREFETCH_SIZE,
+            stats,
+          ),
+      );
+      ranges.push(
+        shouldRanges.length === 1 ? shouldRanges[0] : new Union(shouldRanges),
+      );
+    }
+    const stream = ranges.length === 1 ? ranges[0] : new Intersection(ranges);
+    const state: CellStreamState = { stream, done: false };
+    this.cellStreams.set(cellIDToken, state);
+    return state;
   }
 
   private matchesFilters(point: Doc<"points">): boolean {
@@ -333,4 +362,9 @@ type CellCandidate = {
 type Result = {
   pointID: Id<"points">;
   distance: ChordAngle;
+};
+
+type CellStreamState = {
+  stream: PointSet;
+  done: boolean;
 };
