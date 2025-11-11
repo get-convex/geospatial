@@ -16,14 +16,8 @@ const opts = {
   maxCells: 8,
 };
 
-const testSchema = schema as unknown as NonNullable<
-  Parameters<typeof convexTest>[0]
->;
-const testModules = modules as NonNullable<Parameters<typeof convexTest>[1]>;
-type ClosestQueryCtx = Parameters<ClosestPointQuery["execute"]>[0];
-
 test("closest point query - basic functionality", async () => {
-  const t = await convexTest(testSchema, testModules);
+  const t = convexTest(schema, modules);
   const s2 = await S2Bindings.load();
   const logger = createLogger("INFO");
 
@@ -58,7 +52,6 @@ test("closest point query - basic functionality", async () => {
   }
 
   await t.run(async (ctx) => {
-    const queryCtx = ctx as unknown as ClosestQueryCtx;
     // Test finding closest point to origin
     const query1 = new ClosestPointQuery(
       s2,
@@ -70,7 +63,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result1 = await query1.execute(queryCtx);
+    const result1 = await query1.execute(ctx);
     expect(result1.length).toBe(1);
     expect(result1[0].key).toBe("point1");
     expect(result1[0].distance).toBeLessThan(1); // Should be very close to 0
@@ -86,7 +79,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result2 = await query2.execute(queryCtx);
+    const result2 = await query2.execute(ctx);
     expect(result2.length).toBe(2);
     expect(result2[0].key).toBe("point2");
     expect(result2[1].key).toBe("point1");
@@ -103,7 +96,7 @@ test("closest point query - basic functionality", async () => {
       opts.maxLevel,
       opts.levelMod,
     );
-    const result3 = await query3.execute(queryCtx);
+    const result3 = await query3.execute(ctx);
     expect(result3.length).toBe(1);
     expect(result3[0].key).toBe("point1");
 
@@ -125,7 +118,7 @@ test("closest point query - basic functionality", async () => {
         },
       ],
     );
-    const result4 = await query4.execute(queryCtx);
+    const result4 = await query4.execute(ctx);
     expect(result4.length).toBe(2);
     expect(result4.map((r) => r.key).sort()).toEqual(["point1", "point3"]);
 
@@ -147,7 +140,7 @@ test("closest point query - basic functionality", async () => {
         },
       ],
     );
-    const result5 = await query5.execute(queryCtx);
+    const result5 = await query5.execute(ctx);
     expect(result5.length).toBe(1);
     expect(result5[0].key).toBe("point2");
 
@@ -164,7 +157,7 @@ test("closest point query - basic functionality", async () => {
       [],
       { startInclusive: 3 },
     );
-    const result6 = await query6.execute(queryCtx);
+    const result6 = await query6.execute(ctx);
     expect(result6.length).toBe(1);
     expect(result6[0].key).toBe("point3");
 
@@ -191,7 +184,7 @@ test("closest point query - basic functionality", async () => {
         },
       ],
     );
-    const result7 = await query7.execute(queryCtx);
+    const result7 = await query7.execute(ctx);
     expect(result7.length).toBe(3);
     expect(new Set(result7.map((r) => r.key))).toEqual(
       new Set(["point1", "point2", "point3"]),
@@ -202,7 +195,7 @@ test("closest point query - basic functionality", async () => {
 fcTest.prop({ documents: arbitraryDocuments })(
   "closest point query - property based testing",
   async ({ documents }) => {
-    const t = await convexTest(testSchema, testModules);
+    const t = convexTest(schema, modules);
     const s2 = await S2Bindings.load();
     const logger = createLogger("INFO");
 
@@ -215,7 +208,6 @@ fcTest.prop({ documents: arbitraryDocuments })(
     }
 
     await t.run(async (ctx) => {
-      const queryCtx = ctx as unknown as ClosestQueryCtx;
       const testPoint = { latitude: 0, longitude: 0 };
       const query = new ClosestPointQuery(
         s2,
@@ -227,7 +219,7 @@ fcTest.prop({ documents: arbitraryDocuments })(
         opts.maxLevel,
         opts.levelMod,
       );
-      const results = await query.execute(queryCtx);
+      const results = await query.execute(ctx);
 
       // Verify results are ordered by distance
       for (let i = 1; i < results.length; i++) {
