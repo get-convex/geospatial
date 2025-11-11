@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { encodeTupleKey, decodeTupleKey } from "./tupleKey.js";
-import { Id } from "../_generated/dataModel.js";
+import type { Id } from "../_generated/dataModel.js";
 
 test("encodeTupleKey and decodeTupleKey", () => {
   const sortKey = 123456789;

@@ -1,15 +1,13 @@
-import {
-  Expand,
+import type {
   FunctionReference,
   FunctionReturnType,
   OptionalRestArgs,
 } from "convex/server";
-import { GenericId } from "convex/values";
-import type { api } from "../component/_generated/api.js";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
 import { point, rectangle } from "../component/types.js";
-import { LogLevel } from "../component/lib/logging.js";
-import { FilterBuilderImpl, GeospatialQuery } from "./query.js";
+import type { LogLevel } from "../component/lib/logging.js";
+import { FilterBuilderImpl, type GeospatialQuery } from "./query.js";
+import type { ComponentApi } from "../component/_generated/component.js";
 
 export type { Point, Primitive, GeospatialQuery, Rectangle };
 export { point, rectangle };
@@ -88,7 +86,7 @@ export class GeospatialIndex<
    * @param options - The options to configure the index.
    */
   constructor(
-    private component: UseApi<typeof api>,
+    private component: ComponentApi,
     options?: GeospatialIndexOptions,
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
@@ -294,33 +292,6 @@ export type FilterValue<
   Doc extends GeospatialDocument,
   FieldName extends keyof Doc["filterKeys"],
 > = ExtractArray<Doc["filterKeys"][FieldName]>;
-
-type UseApi<API> = Expand<{
-  [mod in keyof API]: API[mod] extends FunctionReference<
-    infer FType,
-    "public",
-    infer FArgs,
-    infer FReturnType,
-    infer FComponentPath
-  >
-    ? FunctionReference<
-        FType,
-        "internal",
-        OpaqueIds<FArgs>,
-        OpaqueIds<FReturnType>,
-        FComponentPath
-      >
-    : UseApi<API[mod]>;
-}>;
-
-type OpaqueIds<T> =
-  T extends GenericId<infer _T>
-    ? string
-    : T extends (infer U)[]
-      ? OpaqueIds<U>[]
-      : T extends object
-        ? { [K in keyof T]: OpaqueIds<T[K]> }
-        : T;
 
 type QueryCtx = {
   runQuery: <Query extends FunctionReference<"query", "public" | "internal">>(

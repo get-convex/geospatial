@@ -1,13 +1,12 @@
 import { Heap } from "heap-js";
-import type { Primitive } from "../types.js";
-import { ChordAngle, Meters, Point } from "../types.js";
-import { Doc, Id } from "../_generated/dataModel.js";
+import type { ChordAngle, Meters, Point, Primitive } from "../types.js";
+import type { Doc, Id } from "../_generated/dataModel.js";
 import { S2Bindings } from "./s2Bindings.js";
-import { QueryCtx } from "../_generated/server.js";
+import type { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "./approximateCounter.js";
 import { cellCounterKey } from "../streams/cellRange.js";
 import { decodeTupleKey } from "./tupleKey.js";
-import { Logger } from "./logging.js";
+import type { Logger } from "./logging.js";
 import type { Interval } from "./interval.js";
 
 type FilterCondition = {

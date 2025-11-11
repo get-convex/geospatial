@@ -1,4 +1,4 @@
-import { ChordAngle, Point, Rectangle } from "../types.js";
+import type { ChordAngle, Point, Rectangle } from "../types.js";
 import { Go } from "./goRuntime.js";
 import { wasmSource } from "./s2wasm.js";
 

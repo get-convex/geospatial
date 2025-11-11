@@ -1,6 +1,6 @@
 // Encode (sortKey: number, pointId: Id<"points">) as an order preserving string.
 
-import { Id } from "../_generated/dataModel.js";
+import type { Id } from "../_generated/dataModel.js";
 import * as d64 from "./d64.js";
 
 export type TupleKey = string;

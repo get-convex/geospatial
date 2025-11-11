@@ -4,16 +4,10 @@
 //
 // This file has been modified for use by the TinyGo compiler.
 
-const enosys = () => {
-  const err = new Error("not implemented");
-  (err as any).code = "ENOSYS";
-  return err;
-};
-
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
-let reinterpretBuf = new DataView(new ArrayBuffer(8));
-var logLine: any[] = [];
+const reinterpretBuf = new DataView(new ArrayBuffer(8));
+let logLine: any[] = [];
 
 export class Go {
   importObject: any;
@@ -53,7 +47,7 @@ export class Go {
     };
 
     const loadValue = (addr: any) => {
-      let v_ref = mem().getBigUint64(addr, true);
+      const v_ref = mem().getBigUint64(addr, true);
       return unboxValue(v_ref);
     };
 
@@ -109,15 +103,15 @@ export class Go {
     };
 
     const storeValue = (addr: any, v: any) => {
-      let v_ref = boxValue(v);
+      const v_ref = boxValue(v);
       mem().setBigUint64(addr, v_ref, true);
     };
 
-    const loadSlice = (array: any, len: any, cap?: any) => {
+    const loadSlice = (array: any, len: any, _cap?: any) => {
       return new Uint8Array(this._inst.exports.memory.buffer, array, len);
     };
 
-    const loadSliceOfValues = (array: any, len: any, cap: any) => {
+    const loadSliceOfValues = (array: any, len: any, _cap: any) => {
       const a = new Array(len);
       for (let i = 0; i < len; i++) {
         a[i] = loadValue(array + i * 8);
@@ -143,19 +137,19 @@ export class Go {
           let nwritten = 0;
           if (fd == 1) {
             for (let iovs_i = 0; iovs_i < iovs_len; iovs_i++) {
-              let iov_ptr = iovs_ptr + iovs_i * 8; // assuming wasm32
-              let ptr = mem().getUint32(iov_ptr + 0, true);
-              let len = mem().getUint32(iov_ptr + 4, true);
+              const iov_ptr = iovs_ptr + iovs_i * 8; // assuming wasm32
+              const ptr = mem().getUint32(iov_ptr + 0, true);
+              const len = mem().getUint32(iov_ptr + 4, true);
               nwritten += len;
               for (let i = 0; i < len; i++) {
-                let c = mem().getUint8(ptr + i);
+                const c = mem().getUint8(ptr + i);
                 if (c == 13) {
                   // CR
                   // ignore
                 } else if (c == 10) {
                   // LF
                   // write line
-                  let line = decoder.decode(new Uint8Array(logLine));
+                  const line = decoder.decode(new Uint8Array(logLine));
                   logLine = [];
                   console.log(line);
                 } else {
@@ -194,7 +188,7 @@ export class Go {
         },
 
         // func finalizeRef(v ref)
-        "syscall/js.finalizeRef": (v_ref: any) => {
+        "syscall/js.finalizeRef": (_v_ref: any) => {
           // Note: TinyGo does not support finalizers so this should never be
           // called.
           console.error("syscall/js.finalizeRef not implemented");
@@ -208,9 +202,9 @@ export class Go {
 
         // func valueGet(v ref, p string) ref
         "syscall/js.valueGet": (v_ref: any, p_ptr: any, p_len: any) => {
-          let prop = loadString(p_ptr, p_len);
-          let v = unboxValue(v_ref);
-          let result = Reflect.get(v, prop);
+          const prop = loadString(p_ptr, p_len);
+          const v = unboxValue(v_ref);
+          const result = Reflect.get(v, prop);
           return boxValue(result);
         },
 
@@ -342,8 +336,8 @@ export class Go {
           dest_cap: any,
           src_ref: any,
         ) => {
-          let num_bytes_copied_addr = ret_addr;
-          let returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
+          const num_bytes_copied_addr = ret_addr;
+          const returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
 
           const dst = loadSlice(dest_addr, dest_len);
           const src = unboxValue(src_ref);
@@ -367,10 +361,10 @@ export class Go {
           dst_ref: any,
           src_addr: any,
           src_len: any,
-          src_cap: any,
+          _src_cap: any,
         ) => {
-          let num_bytes_copied_addr = ret_addr;
-          let returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
+          const num_bytes_copied_addr = ret_addr;
+          const returned_status_addr = ret_addr + 4; // Address of returned boolean status variable
 
           const dst = unboxValue(dst_ref);
           const src = loadSlice(src_addr, src_len);
@@ -440,9 +434,10 @@ export class Go {
   }
 
   _makeFuncWrapper(id: any) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const go = this;
-    return function (this: any) {
-      const event: any = { id: id, this: this, args: arguments };
+    return function (this: any, ...args: any[]) {
+      const event: any = { id: id, this: this, args };
       go._pendingEvent = event;
       go._resume();
       return event.result;
