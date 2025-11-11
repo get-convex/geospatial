@@ -1,10 +1,10 @@
-import { QueryCtx } from "../_generated/server.js";
-import { Interval } from "../lib/interval.js";
-import { Logger } from "../lib/logging.js";
-import { Primitive, toKey as serialize } from "../lib/primitive.js";
-import { TupleKey, encodeBound } from "../lib/tupleKey.js";
+import type { QueryCtx } from "../_generated/server.js";
+import type { Interval } from "../lib/interval.js";
+import type { Logger } from "../lib/logging.js";
+import { toKey as serialize, type Primitive } from "../lib/primitive.js";
+import { encodeBound, type TupleKey } from "../lib/tupleKey.js";
 import { DatabaseRange } from "./databaseRange.js";
-import { Stats } from "./zigzag.js";
+import type { Stats } from "./zigzag.js";
 
 export class FilterKeyRange extends DatabaseRange {
   constructor(

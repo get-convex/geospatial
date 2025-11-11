@@ -1,4 +1,4 @@
-import { Infer, v } from "convex/values";
+import { v, type Infer } from "convex/values";
 
 export type { Primitive } from "./lib/primitive.js";
 export { primitive } from "./lib/primitive.js";

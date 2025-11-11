@@ -1,4 +1,4 @@
-import { TupleKey } from "../lib/tupleKey.js";
+import type { TupleKey } from "../lib/tupleKey.js";
 
 export interface PointSet {
   /**

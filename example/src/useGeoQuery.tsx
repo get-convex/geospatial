@@ -84,7 +84,8 @@ export function useGeoQuery(
       lastResult = result;
       totalRows += result.rows.length;
     }
-  }, [queries, argsKey, queryResults]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries, argsKey, queryResults, maxRows]);
   const rows: Rows = [];
   const seen = new Set<string>();
   let loading = false;

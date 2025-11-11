@@ -1,5 +1,5 @@
-import { Id } from "../_generated/dataModel.js";
-import { MutationCtx, QueryCtx } from "../_generated/server.js";
+import type { Id } from "../_generated/dataModel.js";
+import type { MutationCtx, QueryCtx } from "../_generated/server.js";
 import { xxHash32 } from "./xxhash.js";
 
 // We assume that (_id, key) is globally unique, so we can implement a probabilistic counter

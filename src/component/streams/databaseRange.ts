@@ -1,9 +1,9 @@
-import { QueryCtx } from "../_generated/server.js";
+import type { QueryCtx } from "../_generated/server.js";
 import * as approximateCounter from "../lib/approximateCounter.js";
-import { Interval } from "../lib/interval.js";
-import { Logger } from "../lib/logging.js";
-import { TupleKey, encodeBound } from "../lib/tupleKey.js";
-import { PointSet, Stats } from "./zigzag.js";
+import type { Interval } from "../lib/interval.js";
+import type { Logger } from "../lib/logging.js";
+import { encodeBound, type TupleKey } from "../lib/tupleKey.js";
+import type { PointSet, Stats } from "./zigzag.js";
 
 export abstract class DatabaseRange implements PointSet {
   private state:
