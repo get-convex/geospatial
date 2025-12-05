@@ -136,6 +136,10 @@ const example = query({
 });
 ```
 
+The legacy `queryNearest` helper now delegates to `nearest` and is deprecated.
+It only accepts a `maxDistance` numeric argument for backwards compatibility.
+New integrations should prefer `nearest`.
+
 This query will find all points that lie within the query rectangle, sort them
 in ascending `sortKey` order, and return at most 16 results.
 
@@ -265,15 +269,12 @@ const example = query({
   handler: async (ctx) => {
     const maxResults = 16;
     const maxDistance = 10000;
-    const result = await geospatial.queryNearest(
-      ctx,
-      { latitude: 40.7813, longitude: -73.9737 },
-      maxResults,
-      {
-        maxDistance,
-        filter: (q) => q.eq("category", "coffee"),
-      },
-    );
+    const result = await geospatial.nearest(ctx, {
+      point: { latitude: 40.7813, longitude: -73.9737 },
+      limit: maxResults,
+      maxDistance,
+      filter: (q) => q.eq("category", "coffee"),
+    });
     return result;
   },
 });
