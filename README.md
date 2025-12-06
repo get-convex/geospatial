@@ -280,14 +280,14 @@ const example = query({
 });
 ```
 
-The fourth argument can either be a numeric `maxDistance` (for backwards
-compatibility) or an options object. When you pass an options object you can
-combine `maxDistance` with the same filter builder used by `query`, including
-`eq`, `in`, `gte`, and `lt` conditions. These filters are enforced through the
-indexed `pointsByFilterKey` range before documents are loaded, so the database
-does the heavy lifting and the query avoids reading unrelated points. Pairing
-that with a sensible `maxDistance` further constrains the search space and can
-greatly speed up searching the index.
+The second argument is an options object containing `point`, `limit`, and
+optionally `maxDistance` and `filter`. You can combine `maxDistance` with the
+same filter builder used by `query`, including `eq`, `in`, `gte`, and `lt`
+conditions. These filters are enforced through the indexed `pointsByFilterKey`
+range before documents are loaded, so the database does the heavy lifting and
+the query avoids reading unrelated points. Pairing that with a sensible
+`maxDistance` further constrains the search space and can greatly speed up
+searching the index.
 
 ## Example
 
