@@ -22,6 +22,7 @@ import type * as lib_tupleKey from "../lib/tupleKey.js";
 import type * as lib_xxhash from "../lib/xxhash.js";
 import type * as query from "../query.js";
 import type * as streams_cellRange from "../streams/cellRange.js";
+import type * as streams_constants from "../streams/constants.js";
 import type * as streams_databaseRange from "../streams/databaseRange.js";
 import type * as streams_filterKeyRange from "../streams/filterKeyRange.js";
 import type * as streams_intersection from "../streams/intersection.js";
@@ -51,6 +52,7 @@ const fullApi: ApiFromModules<{
   "lib/xxhash": typeof lib_xxhash;
   query: typeof query;
   "streams/cellRange": typeof streams_cellRange;
+  "streams/constants": typeof streams_constants;
   "streams/databaseRange": typeof streams_databaseRange;
   "streams/filterKeyRange": typeof streams_filterKeyRange;
   "streams/intersection": typeof streams_intersection;

@@ -147,6 +147,11 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "query",
         "internal",
         {
+          filtering: Array<{
+            filterKey: string;
+            filterValue: string | number | boolean | null | bigint;
+            occur: "should" | "must";
+          }>;
           levelMod: number;
           logLevel: "DEBUG" | "INFO" | "WARN" | "ERROR";
           maxDistance?: number;
@@ -155,6 +160,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           minLevel: number;
           nextCursor?: string;
           point: { latitude: number; longitude: number };
+          sorting: {
+            interval: { endExclusive?: number; startInclusive?: number };
+          };
         },
         Array<{
           coordinates: { latitude: number; longitude: number };

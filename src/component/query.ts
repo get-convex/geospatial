@@ -13,8 +13,9 @@ import type { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
 import { ClosestPointQuery } from "./lib/pointQuery.js";
+import { PREFETCH_SIZE } from "./streams/constants.js";
 
-export const PREFETCH_SIZE = 16;
+export { PREFETCH_SIZE } from "./streams/constants.js";
 
 const equalityCondition = v.object({
   occur: v.union(v.literal("should"), v.literal("must")),
@@ -274,6 +275,10 @@ export const nearestPoints = query({
     maxLevel: v.number(),
     levelMod: v.number(),
     nextCursor: v.optional(v.string()),
+    filtering: v.array(equalityCondition),
+    sorting: v.object({
+      interval,
+    }),
     logLevel,
   },
   returns: v.array(queryResultWithDistance),
@@ -292,6 +297,8 @@ export const nearestPoints = query({
       args.minLevel,
       args.maxLevel,
       args.levelMod,
+      args.filtering,
+      args.sorting.interval,
     );
     const results = await query.execute(ctx);
     return results;

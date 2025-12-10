@@ -26,12 +26,11 @@ export const nearestPoints = query({
     maxDistance: v.optional(v.number()),
   },
   handler: async (ctx, { point, maxRows, maxDistance }) => {
-    const results = await geospatial.queryNearest(
-      ctx,
+    const results = await geospatial.nearest(ctx, {
       point,
-      maxRows,
+      limit: maxRows,
       maxDistance,
-    );
+    });
     return await Promise.all(
       results.map(async (result) => {
         const row = await ctx.db.get(result.key as Id<"locations">);

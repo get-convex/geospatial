@@ -37,6 +37,22 @@ export type GeospatialDocument<
   sortKey: number;
 };
 
+export type NearestQueryOptions<
+  Doc extends GeospatialDocument = GeospatialDocument,
+> = {
+  point: Point;
+  limit: number;
+  maxDistance?: number;
+  filter?: NonNullable<GeospatialQuery<Doc>["filter"]>;
+};
+
+/**
+ * @deprecated Use `NearestQueryOptions` with `nearest` instead.
+ */
+export type QueryNearestOptions<
+  Doc extends GeospatialDocument = GeospatialDocument,
+> = Pick<NearestQueryOptions<Doc>, "maxDistance" | "filter">;
+
 export interface GeospatialIndexOptions {
   /**
    * The minimum S2 cell level to use when querying. Defaults to 4.
@@ -207,10 +223,43 @@ export class GeospatialIndex<
    * Query for the nearest points to a given point.
    *
    * @param ctx - The Convex query context.
-   * @param point - The point to query for.
-   * @param maxResults - The maximum number of results to return.
-   * @param maxDistance - The maximum distance to return results within in meters.
+   * @param options - The nearest query parameters.
    * @returns - An array of objects with the key-coordinate pairs and their distance from the query point in meters.
+   */
+  async nearest(
+    ctx: QueryCtx,
+    {
+      point,
+      limit,
+      maxDistance,
+      filter,
+    }: NearestQueryOptions<GeospatialDocument<Key, Filters>>,
+  ) {
+    const filterBuilder = new FilterBuilderImpl<
+      GeospatialDocument<Key, Filters>
+    >();
+    if (filter) {
+      filter(filterBuilder);
+    }
+
+    const resp = await ctx.runQuery(this.component.query.nearestPoints, {
+      point,
+      maxDistance,
+      maxResults: limit,
+      minLevel: this.minLevel,
+      maxLevel: this.maxLevel,
+      levelMod: this.levelMod,
+      logLevel: this.logLevel,
+      filtering: filterBuilder.filterConditions,
+      sorting: { interval: filterBuilder.interval ?? {} },
+    });
+    return resp as { key: Key; coordinates: Point; distance: number }[];
+  }
+
+  /**
+   * Query for the nearest points to a given point.
+   *
+   * @deprecated Use `nearest(ctx, { point, limit, maxDistance, filter })` instead.
    */
   async queryNearest(
     ctx: QueryCtx,
@@ -218,16 +267,11 @@ export class GeospatialIndex<
     maxResults: number,
     maxDistance?: number,
   ) {
-    const resp = await ctx.runQuery(this.component.query.nearestPoints, {
+    return this.nearest(ctx, {
       point,
+      limit: maxResults,
       maxDistance,
-      maxResults,
-      minLevel: this.minLevel,
-      maxLevel: this.maxLevel,
-      levelMod: this.levelMod,
-      logLevel: this.logLevel,
     });
-    return resp as { key: Key; coordinates: Point; distance: number }[];
   }
 
   /**
