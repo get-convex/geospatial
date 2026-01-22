@@ -1,2 +1,4 @@
 github.com/golang/geo v0.0.0-20230421003525-6adc56603217 h1:HKlyj6in2JV6wVkmQ4XmG/EIm+SCYlPZ+V4GWit7Z+I=
 github.com/golang/geo v0.0.0-20230421003525-6adc56603217/go.mod h1:8wI0hitZ3a1IxZfeH3/5I97CI8i5cLGsYe7xNhQGs9U=
+github.com/golang/geo v0.0.0-20260120070133-792bb8583fbb h1:OhyJ/wXEqRssvvFcXP8Wzoyn0fbiqWgjHXLKj3ZOU+4=
+github.com/golang/geo v0.0.0-20260120070133-792bb8583fbb/go.mod h1:Mymr9kRGDc64JPr03TSZmuIBODZ3KyswLzm1xL0HFA8=
