@@ -103,7 +103,7 @@
     "react-leaflet": "4.2.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.54.0",
-    "vite": "6.4.1",
+    "vite": "6.4.2",
     "vitest": "3.2.4"
   },
   "types": "./dist/client/index.d.ts",
