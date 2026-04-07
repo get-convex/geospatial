@@ -67,6 +67,8 @@
     }
   },
   "dependencies": {
+    "@turf/buffer": "^7.3.3",
+    "@turf/helpers": "^7.3.3",
     "async-channel": "^0.2.0",
     "heap-js": "^2.5.0"
   },

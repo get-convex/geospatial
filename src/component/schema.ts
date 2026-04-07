@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { point, primitive } from "./types.js";
+import { point, polygon, polyline, primitive } from "./types.js";
 
 export default defineSchema({
   points: defineTable({
@@ -25,4 +25,27 @@ export default defineSchema({
     key: v.string(),
     count: v.number(),
   }).index("key", ["key"]),
+
+  geometries: defineTable({
+    key: v.string(),
+    type: v.union(v.literal("polygon"), v.literal("polyline")),
+    coordinates: v.union(polygon, polyline),
+    south: v.number(),
+    north: v.number(),
+    west: v.number(),
+    east: v.number(),
+    sortKey: v.number(),
+    filterKeys: v.optional(v.record(v.string(), primitive)),
+  })
+    .index("byKey", ["key"])
+    .index("bySortKey", ["sortKey"]),
+
+  geometryCells: defineTable({
+    geometryId: v.id("geometries"),
+    geometryKey: v.string(),
+    cellToken: v.string(),
+    level: v.number(),
+  })
+    .index("byCellToken", ["cellToken"])
+    .index("byGeometryKey", ["geometryKey"]),
 });

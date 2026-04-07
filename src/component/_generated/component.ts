@@ -84,6 +84,276 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         Name
       >;
     };
+    geometry: {
+      get: FunctionReference<
+        "query",
+        "internal",
+        { key: string },
+        {
+          boundingBox: {
+            east: number;
+            north: number;
+            south: number;
+            west: number;
+          };
+          coordinates:
+            | {
+                exterior: Array<{ latitude: number; longitude: number }>;
+                holes?: Array<Array<{ latitude: number; longitude: number }>>;
+              }
+            | Array<{ latitude: number; longitude: number }>;
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          key: string;
+          sortKey: number;
+          type: "polygon" | "polyline";
+        } | null,
+        Name
+      >;
+      insert: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          coordinates:
+            | {
+                exterior: Array<{ latitude: number; longitude: number }>;
+                holes?: Array<Array<{ latitude: number; longitude: number }>>;
+              }
+            | Array<{ latitude: number; longitude: number }>;
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          key: string;
+          sortKey?: number;
+          type: "polygon" | "polyline";
+        },
+        null,
+        Name
+      >;
+      remove: FunctionReference<
+        "mutation",
+        "internal",
+        { key: string },
+        null,
+        Name
+      >;
+      update: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          coordinates?:
+            | {
+                exterior: Array<{ latitude: number; longitude: number }>;
+                holes?: Array<Array<{ latitude: number; longitude: number }>>;
+              }
+            | Array<{ latitude: number; longitude: number }>;
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          key: string;
+          sortKey?: number;
+        },
+        null,
+        Name
+      >;
+    };
+    geometryMeasure: {
+      polygonArea: FunctionReference<
+        "query",
+        "internal",
+        {
+          polygon: {
+            exterior: Array<{ latitude: number; longitude: number }>;
+            holes?: Array<Array<{ latitude: number; longitude: number }>>;
+          };
+        },
+        number,
+        Name
+      >;
+      polygonCentroid: FunctionReference<
+        "query",
+        "internal",
+        {
+          polygon: {
+            exterior: Array<{ latitude: number; longitude: number }>;
+            holes?: Array<Array<{ latitude: number; longitude: number }>>;
+          };
+        },
+        { latitude: number; longitude: number },
+        Name
+      >;
+      polygonPerimeter: FunctionReference<
+        "query",
+        "internal",
+        {
+          polygon: {
+            exterior: Array<{ latitude: number; longitude: number }>;
+            holes?: Array<Array<{ latitude: number; longitude: number }>>;
+          };
+        },
+        number,
+        Name
+      >;
+      polylineCentroid: FunctionReference<
+        "query",
+        "internal",
+        { polyline: Array<{ latitude: number; longitude: number }> },
+        { latitude: number; longitude: number },
+        Name
+      >;
+      polylineLength: FunctionReference<
+        "query",
+        "internal",
+        { polyline: Array<{ latitude: number; longitude: number }> },
+        number,
+        Name
+      >;
+    };
+    geometryQuery: {
+      containsPoint: FunctionReference<
+        "query",
+        "internal",
+        {
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          limit?: number;
+          point: { latitude: number; longitude: number };
+        },
+        {
+          results: Array<{
+            boundingBox: {
+              east: number;
+              north: number;
+              south: number;
+              west: number;
+            };
+            coordinates: {
+              exterior: Array<{ latitude: number; longitude: number }>;
+              holes?: Array<Array<{ latitude: number; longitude: number }>>;
+            };
+            key: string;
+            type: "polygon";
+          }>;
+          truncated: boolean;
+        },
+        Name
+      >;
+      geometriesNear: FunctionReference<
+        "query",
+        "internal",
+        {
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          limit?: number;
+          maxDistance: number;
+          point: { latitude: number; longitude: number };
+        },
+        {
+          results: Array<{
+            boundingBox: {
+              east: number;
+              north: number;
+              south: number;
+              west: number;
+            };
+            coordinates:
+              | {
+                  exterior: Array<{ latitude: number; longitude: number }>;
+                  holes?: Array<Array<{ latitude: number; longitude: number }>>;
+                }
+              | Array<{ latitude: number; longitude: number }>;
+            distance: number;
+            key: string;
+            type: "polygon" | "polyline";
+          }>;
+          truncated: boolean;
+        },
+        Name
+      >;
+      intersects: FunctionReference<
+        "query",
+        "internal",
+        {
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          limit?: number;
+          maxCoveringCells?: number;
+          shape:
+            | {
+                rectangle: {
+                  east: number;
+                  north: number;
+                  south: number;
+                  west: number;
+                };
+                type: "rectangle";
+              }
+            | {
+                polygon: {
+                  exterior: Array<{ latitude: number; longitude: number }>;
+                  holes?: Array<Array<{ latitude: number; longitude: number }>>;
+                };
+                type: "polygon";
+              };
+        },
+        {
+          results: Array<{
+            boundingBox: {
+              east: number;
+              north: number;
+              south: number;
+              west: number;
+            };
+            coordinates:
+              | {
+                  exterior: Array<{ latitude: number; longitude: number }>;
+                  holes?: Array<Array<{ latitude: number; longitude: number }>>;
+                }
+              | Array<{ latitude: number; longitude: number }>;
+            key: string;
+            type: "polygon" | "polyline";
+          }>;
+          truncated: boolean;
+        },
+        Name
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number },
+        Array<{
+          boundingBox: {
+            east: number;
+            north: number;
+            south: number;
+            west: number;
+          };
+          coordinates:
+            | {
+                exterior: Array<{ latitude: number; longitude: number }>;
+                holes?: Array<Array<{ latitude: number; longitude: number }>>;
+              }
+            | Array<{ latitude: number; longitude: number }>;
+          filterKeys?: Record<
+            string,
+            string | number | boolean | null | bigint
+          >;
+          key: string;
+          type: "polygon" | "polyline";
+        }>,
+        Name
+      >;
+    };
     query: {
       debugCells: FunctionReference<
         "query",
@@ -123,12 +393,30 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               occur: "should" | "must";
             }>;
             maxResults: number;
-            rectangle: {
-              east: number;
-              north: number;
-              south: number;
-              west: number;
-            };
+            shape:
+              | {
+                  rectangle: {
+                    east: number;
+                    north: number;
+                    south: number;
+                    west: number;
+                  };
+                  type: "rectangle";
+                }
+              | {
+                  polygon: {
+                    exterior: Array<{ latitude: number; longitude: number }>;
+                    holes?: Array<
+                      Array<{ latitude: number; longitude: number }>
+                    >;
+                  };
+                  type: "polygon";
+                }
+              | {
+                  bufferMeters: number;
+                  polyline: Array<{ latitude: number; longitude: number }>;
+                  type: "polyline";
+                };
             sorting: {
               interval: { endExclusive?: number; startInclusive?: number };
             };

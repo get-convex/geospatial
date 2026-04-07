@@ -1,5 +1,5 @@
 import { v, type Infer } from "convex/values";
-import { type Point, point, primitive, rectangle } from "./types.js";
+import { type Point, point, polygon, polyline, primitive, rectangle } from "./types.js";
 import { query } from "./_generated/server.js";
 import type { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -23,12 +23,16 @@ const equalityCondition = v.object({
   filterValue: primitive,
 });
 
+const queryShape = v.union(
+  v.object({ type: v.literal("rectangle"), rectangle }),
+  v.object({ type: v.literal("polygon"), polygon }),
+  v.object({ type: v.literal("polyline"), polyline, bufferMeters: v.number() }),
+);
+
 const geospatialQuery = v.object({
-  rectangle,
+  shape: queryShape,
   filtering: v.array(equalityCondition),
   sorting: v.object({
-    // TODO: Support reverse order.
-    // order: v.union(v.literal("asc"), v.literal("desc")),
     interval,
   }),
   maxResults: v.number(),
@@ -114,16 +118,77 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    const { rectangle } = args.query;
-    const cells = s2
-      .coverRectangle(
-        rectangle,
+    const { shape } = args.query;
+
+    // Get covering cells and containment function based on shape type
+    let cellIDs: bigint[];
+    let containsPoint: (p: Point) => boolean;
+
+    if (shape.type === "rectangle") {
+      cellIDs = s2.coverRectangle(
+        shape.rectangle,
         args.minLevel,
         args.maxLevel,
         args.levelMod,
         args.maxCells,
-      )
-      .map((cellID) => s2.cellIDToken(cellID));
+      );
+      containsPoint = (p) => s2.rectangleContains(shape.rectangle, p);
+    } else if (shape.type === "polygon") {
+      // Reject polygons with holes
+      const poly = shape.polygon as typeof shape.polygon & {
+        holes?: unknown;
+        interiors?: unknown;
+        interior?: unknown;
+      };
+      if (
+        (poly.holes && Array.isArray(poly.holes) && poly.holes.length > 0) ||
+        (poly.interiors &&
+          Array.isArray(poly.interiors) &&
+          poly.interiors.length > 0) ||
+        (poly.interior && Array.isArray(poly.interior) && poly.interior.length > 0)
+      ) {
+        throw new Error("Polygon holes are not supported");
+      }
+      const exterior = shape.polygon.exterior;
+      cellIDs = s2.coverPolygon(
+        exterior,
+        args.minLevel,
+        args.maxLevel,
+        args.levelMod,
+        args.maxCells,
+      );
+      containsPoint = (p) => s2.polygonContainsPoint(exterior, p);
+    } else {
+      // shape.type === "polyline"
+      const polylinePoints = shape.polyline;
+      const bufferMeters = shape.bufferMeters;
+
+      // Validate polyline inputs
+      if (polylinePoints.length < 2) {
+        throw new Error("Polyline must have at least 2 points");
+      }
+      if (bufferMeters < 0) {
+        throw new Error("bufferMeters must be non-negative");
+      }
+
+      const maxLevelDiff = 4; // Internal default - controls accuracy vs cell count
+      cellIDs = s2.coverPolylineBuffered(
+        polylinePoints,
+        bufferMeters,
+        args.minLevel,
+        args.maxLevel,
+        args.levelMod,
+        args.maxCells,
+        maxLevelDiff,
+      );
+      const bufferChordAngle = s2.metersToChordAngle(bufferMeters);
+      containsPoint = (p) => {
+        const distance = s2.distanceToPolyline(polylinePoints, p);
+        return distance <= bufferChordAngle;
+      };
+    }
+
+    const cells = cellIDs.map((cellID) => s2.cellIDToken(cellID));
     logger.debug("S2 cells", args, cells);
 
     const stats: Stats = {
@@ -223,7 +288,7 @@ export const execute = query({
             throw new Error("Internal error: document not found");
           }
 
-          const contains = s2.rectangleContains(rectangle, doc.coordinates);
+          const contains = containsPoint(doc.coordinates);
           if (!contains) {
             stats.rowsPostFiltered++;
             continue;

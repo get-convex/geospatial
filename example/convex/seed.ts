@@ -1,8 +1,101 @@
 import { v } from "convex/values";
 import { geospatial } from "./example.js";
-import { action, internalMutation } from "./_generated/server";
+import { action, internalMutation, mutation } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { FOOD_EMOJIS } from "./constants.js";
+
+// Simplified US state polygon coordinates for demonstration
+const US_STATE_POLYGONS = {
+  pennsylvania: {
+    name: "Pennsylvania",
+    exterior: [
+      { latitude: 42.0, longitude: -80.52 },
+      { latitude: 42.0, longitude: -79.76 },
+      { latitude: 42.27, longitude: -79.76 },
+      { latitude: 42.0, longitude: -77.83 },
+      { latitude: 42.0, longitude: -75.36 },
+      { latitude: 41.36, longitude: -75.07 },
+      { latitude: 40.97, longitude: -75.13 },
+      { latitude: 40.57, longitude: -75.07 },
+      { latitude: 40.37, longitude: -74.73 },
+      { latitude: 39.72, longitude: -75.56 },
+      { latitude: 39.72, longitude: -76.57 },
+      { latitude: 39.72, longitude: -79.48 },
+      { latitude: 39.72, longitude: -80.52 },
+      { latitude: 40.64, longitude: -80.52 },
+      { latitude: 42.0, longitude: -80.52 },
+    ],
+  },
+  illinois: {
+    name: "Illinois",
+    exterior: [
+      { latitude: 42.5, longitude: -90.64 },
+      { latitude: 42.5, longitude: -87.02 },
+      { latitude: 41.76, longitude: -87.53 },
+      { latitude: 39.35, longitude: -87.53 },
+      { latitude: 38.95, longitude: -87.95 },
+      { latitude: 38.78, longitude: -87.66 },
+      { latitude: 38.2, longitude: -88.07 },
+      { latitude: 37.95, longitude: -88.71 },
+      { latitude: 37.22, longitude: -89.17 },
+      { latitude: 36.97, longitude: -89.52 },
+      { latitude: 37.0, longitude: -90.37 },
+      { latitude: 38.17, longitude: -90.21 },
+      { latitude: 38.83, longitude: -90.11 },
+      { latitude: 39.31, longitude: -91.06 },
+      { latitude: 40.0, longitude: -91.42 },
+      { latitude: 40.61, longitude: -91.22 },
+      { latitude: 41.07, longitude: -90.95 },
+      { latitude: 41.46, longitude: -90.46 },
+      { latitude: 42.5, longitude: -90.64 },
+    ],
+  },
+  ohio: {
+    name: "Ohio",
+    exterior: [
+      { latitude: 41.98, longitude: -84.82 },
+      { latitude: 41.76, longitude: -83.45 },
+      { latitude: 41.5, longitude: -82.69 },
+      { latitude: 41.68, longitude: -81.0 },
+      { latitude: 40.99, longitude: -80.52 },
+      { latitude: 40.64, longitude: -80.52 },
+      { latitude: 39.72, longitude: -80.52 },
+      { latitude: 38.77, longitude: -81.76 },
+      { latitude: 38.59, longitude: -82.29 },
+      { latitude: 38.76, longitude: -82.86 },
+      { latitude: 39.02, longitude: -84.26 },
+      { latitude: 39.1, longitude: -84.82 },
+      { latitude: 41.98, longitude: -84.82 },
+    ],
+  },
+};
+
+/**
+ * Seed the database with US state polygons using the geometry storage API.
+ */
+export const seedStatePolygons = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const inserted: string[] = [];
+
+    for (const [stateKey, stateData] of Object.entries(US_STATE_POLYGONS)) {
+      try {
+        await geospatial.insertPolygon(
+          ctx,
+          `state:${stateKey}`,
+          { exterior: stateData.exterior },
+          { name: stateData.name, type: "state" }
+        );
+        inserted.push(stateData.name);
+      } catch (e) {
+        // Polygon may already exist
+        console.warn(`State ${stateData.name} failed to insert:`, e);
+      }
+    }
+
+    return { inserted };
+  },
+});
 
 export const addBatch = internalMutation({
   args: { count: v.number() },

@@ -9,8 +9,17 @@
   --accent-secondary: #357abd;
   --accent-light: #f0f7ff;
   --accent-border: #e1efff;
+  --success-primary: #22c55e;
+  --success-light: #dcfce7;
+  --success-text: #166534;
+  --danger-primary: #ef4444;
+  --warning-primary: #f59e0b;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --shadow-color-strong: rgba(0, 0, 0, 0.15);
+  /* Polyline/route colors (orange/amber) */
+  --polyline-primary: #f59e0b;
+  --polyline-light: #fef3c7;
+  --polyline-text: #92400e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -25,8 +34,17 @@
     --accent-secondary: #4a90e2;
     --accent-light: rgba(74, 144, 226, 0.15);
     --accent-border: rgba(74, 144, 226, 0.3);
+    --success-primary: #4ade80;
+    --success-light: rgba(34, 197, 94, 0.15);
+    --success-text: #86efac;
+    --danger-primary: #f87171;
+    --warning-primary: #fbbf24;
     --shadow-color: rgba(0, 0, 0, 0.3);
     --shadow-color-strong: rgba(0, 0, 0, 0.4);
+    /* Polyline/route colors (orange/amber) - dark mode */
+    --polyline-primary: #fbbf24;
+    --polyline-light: rgba(251, 191, 36, 0.15);
+    --polyline-text: #fcd34d;
   }
 }
 
@@ -36,6 +54,7 @@
   padding: 2rem;
   text-align: center;
   color: var(--text-primary);
+  width: 100%;
 }
 
 .logo {
@@ -181,7 +200,9 @@ button {
 
 /* Emoji marker styling */
 .emoji-marker {
-  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+  transition:
+    transform 0.2s ease-in-out,
+    filter 0.2s ease-in-out;
 }
 
 .emoji-marker:hover {
@@ -256,6 +277,11 @@ button:hover {
   box-shadow: 0 2px 4px var(--shadow-color);
 }
 
+/* Common button hover style */
+.common-button:hover {
+  background-color: var(--accent-secondary) !important;
+}
+
 button:active {
   transform: translateY(0);
 }
@@ -305,9 +331,15 @@ input[type="number"]::-webkit-inner-spin-button {
 
 /* Loading indicator animation */
 @keyframes pulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 
 .loading-indicator {
@@ -350,9 +382,10 @@ input[type="number"]::-webkit-inner-spin-button {
 /* Dark mode specific map adjustments */
 @media (prefers-color-scheme: dark) {
   .leaflet-tile {
-    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg)
+      saturate(0.3) brightness(0.7) !important;
   }
-  
+
   .leaflet-container {
     background: #333 !important;
   }
