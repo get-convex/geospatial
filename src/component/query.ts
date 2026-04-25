@@ -195,7 +195,7 @@ export const execute = query({
           }
           const { pointId } = decodeTupleKey(tupleKey);
           try {
-            await channel.push({ tupleKey, docPromise: ctx.db.get(pointId) });
+            await channel.push({ tupleKey, docPromise: ctx.db.get("points", pointId) });
           } catch (e) {
             if (e instanceof ChannelClosedError) {
               break;

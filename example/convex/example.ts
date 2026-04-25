@@ -33,7 +33,7 @@ export const nearestPoints = query({
     });
     return await Promise.all(
       results.map(async (result) => {
-        const row = await ctx.db.get(result.key as Id<"locations">);
+        const row = await ctx.db.get("locations", result.key as Id<"locations">);
         if (!row) {
           throw new Error("Invalid locationId");
         }
@@ -91,7 +91,7 @@ export const search = query({
     );
     const rows = await Promise.all(
       results.map(async (result) => {
-        const row = await ctx.db.get(result.key);
+        const row = await ctx.db.get("locations", result.key);
         if (!row) {
           throw new Error("Invalid locationId");
         }

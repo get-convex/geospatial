@@ -24,7 +24,7 @@ export async function increment(
     .withIndex("key", (q) => q.eq("key", key))
     .first();
   if (existing) {
-    await ctx.db.patch(existing._id, { count: existing.count + 1 });
+    await ctx.db.patch("approximateCounters", existing._id, { count: existing.count + 1 });
   } else {
     await ctx.db.insert("approximateCounters", { key, count: 1 });
   }
@@ -46,9 +46,9 @@ export async function decrement(
     throw new Error(`Invariant failed: Missing counter for key ${key}`);
   }
   if (existing.count === 1) {
-    await ctx.db.delete(existing._id);
+    await ctx.db.delete("approximateCounters", existing._id);
   } else {
-    await ctx.db.patch(existing._id, { count: existing.count - 1 });
+    await ctx.db.patch("approximateCounters", existing._id, { count: existing.count - 1 });
   }
 }
 

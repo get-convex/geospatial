@@ -135,7 +135,7 @@ async function removePointByKey(
         `Invariant failed: Missing cell ${cell} for point ${existing._id}`,
       );
     }
-    await ctx.db.delete(existingCell._id);
+    await ctx.db.delete("pointsByCell", existingCell._id);
     await approximateCounter.decrement(ctx, existing._id, cellCounterKey(cell));
   }
   for (const [filterKey, filterDoc] of Object.entries(existing.filterKeys)) {
@@ -155,7 +155,7 @@ async function removePointByKey(
           `Invariant failed: Missing filterKey ${filterKey}:${filterValue} for point ${existing._id}`,
         );
       }
-      await ctx.db.delete(existingFilterKey._id);
+      await ctx.db.delete("pointsByFilterKey", existingFilterKey._id);
       await approximateCounter.decrement(
         ctx,
         existing._id,
@@ -163,6 +163,6 @@ async function removePointByKey(
       );
     }
   }
-  await ctx.db.delete(existing._id);
+  await ctx.db.delete("points", existing._id);
   return true;
 }
