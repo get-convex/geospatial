@@ -123,7 +123,7 @@ export class ClosestPointQuery {
             }
             continue;
           }
-          const point = await ctx.db.get(pointId);
+          const point = await ctx.db.get("points", pointId);
           if (!point) {
             throw new Error("Point not found");
           }
@@ -140,7 +140,7 @@ export class ClosestPointQuery {
     const entries = this.results
       .toArray()
       .sort((a, b) => a.distance - b.distance);
-    const points = await Promise.all(entries.map((r) => ctx.db.get(r.pointID)));
+    const points = await Promise.all(entries.map((r) => ctx.db.get("points", r.pointID)));
     const results = [];
     for (let i = 0; i < entries.length; i++) {
       const point = points[i];
