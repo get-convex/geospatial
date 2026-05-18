@@ -73,7 +73,7 @@
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^2.0.0",
     "@edge-runtime/vm": "5.0.0",
-    "@eslint/js": "9.39.2",
+    "@eslint/js": "10.0.1",
     "@fast-check/vitest": "0.2.4",
     "@types/d3-array": "3.2.2",
     "@types/leaflet": "1.9.21",
@@ -88,7 +88,7 @@
     "convex": "1.35.1",
     "convex-test": "0.0.41",
     "d3-array": "3.2.4",
-    "eslint": "8.57.1",
+    "eslint": "10.4.0",
     "eslint-plugin-react-hooks": "7.0.1",
     "eslint-plugin-react-refresh": "0.4.26",
     "globals": "17.4.0",
