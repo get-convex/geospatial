@@ -17,8 +17,10 @@ export type Logger = {
   timeEnd: (label: string) => void;
 };
 
+export const LOG_LEVELS = ["DEBUG", "INFO", "WARN", "ERROR"];
+
 export function createLogger(level: LogLevel): Logger {
-  const levelIndex = ["DEBUG", "INFO", "WARN", "ERROR"].indexOf(level);
+  const levelIndex = LOG_LEVELS.indexOf(level);
   if (levelIndex === -1) {
     throw new Error(`Invalid log level: ${level}`);
   }
