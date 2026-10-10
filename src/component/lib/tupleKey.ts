@@ -15,7 +15,8 @@ export function encodeTupleKey(
   // Write `0x0D` as the header.
   view.setUint8(0, 0x0d);
 
-  const littleEndian = true;
+  // Use big-endian encoding to maintain lexicographic ordering
+  const littleEndian = false;
   view.setFloat64(1, sortKey, littleEndian);
 
   let sortKeyUint64 = view.getBigUint64(1, littleEndian);
@@ -58,7 +59,8 @@ export function decodeTupleKey(key: TupleKey): {
       `Invalid tuple key ${key}: Expected header 0x0D, got ${view.getUint8(0)}`,
     );
   }
-  const littleEndian = true;
+  // Use big-endian encoding to match encoding
+  const littleEndian = false;
   let encodedUint64 = view.getBigUint64(1, littleEndian);
   // If the sign bit was set, just turn it off.
   if ((encodedUint64 & (1n << 63n)) !== 0n) {
