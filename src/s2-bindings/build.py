@@ -7,7 +7,7 @@ DEBUG = False
 
 with tempfile.TemporaryDirectory() as tempdir:
     subprocess.check_call(["go", "mod", "tidy"])
-    assert subprocess.check_output(["tinygo", "version"]).strip().split()[2] == b"0.33.0"
+    assert subprocess.check_output(["tinygo", "version"]).strip().split()[2] == b"0.40.1"
 
     wasm_path = os.path.join(tempdir, "s2-bindings.wasm")
 
@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as tempdir:
 
     subprocess.check_call(
         args,
-        env={"GOOS": "wasi1p", "GOARCH": "wasm", **os.environ},
+        env={"GOOS": "wasip1", "GOARCH": "wasm", **os.environ},
     )
     with open(wasm_path, "rb") as f:
         wasm = f.read()
