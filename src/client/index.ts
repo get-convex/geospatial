@@ -5,7 +5,7 @@ import type {
 } from "convex/server";
 import type { Point, Primitive, Rectangle } from "../component/types.js";
 import { point, rectangle } from "../component/types.js";
-import type { LogLevel } from "../component/lib/logging.js";
+import { LOG_LEVELS, type LogLevel } from "../component/lib/logging.js";
 import { FilterBuilderImpl, type GeospatialQuery } from "./query.js";
 import type { ComponentApi } from "../component/_generated/component.js";
 
@@ -100,16 +100,13 @@ export class GeospatialIndex<
   ) {
     let DEFAULT_LOG_LEVEL: LogLevel = "INFO";
     if (process.env.GEOSPATIAL_LOG_LEVEL) {
-      if (
-        !["DEBUG", "INFO", "WARN", "ERROR"].includes(
-          process.env.GEOSPATIAL_LOG_LEVEL,
-        )
-      ) {
+      if (LOG_LEVELS.includes(process.env.GEOSPATIAL_LOG_LEVEL)) {
+        DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
+      } else {
         console.warn(
-          `Invalid log level (${process.env.GEOSPATIAL_LOG_LEVEL}), defaulting to "INFO"`,
+          `Invalid log level (${process.env.GEOSPATIAL_LOG_LEVEL}), defaulting to "${DEFAULT_LOG_LEVEL}"`,
         );
       }
-      DEFAULT_LOG_LEVEL = process.env.GEOSPATIAL_LOG_LEVEL as LogLevel;
     }
     this.logLevel = options?.logLevel ?? DEFAULT_LOG_LEVEL;
     this.minLevel = options?.minLevel ?? DEFAULT_MIN_LEVEL;
