@@ -1,11 +1,11 @@
 {
   "name": "@convex-dev/geospatial",
   "description": "A geospatial index for Convex",
-  "repository": "github:get-convex/geospatial",
-  "homepage": "https://github.com/get-convex/geospatial#readme",
+  "repository": "github:convex/geospatial",
+  "homepage": "https://github.com/convex/geospatial#readme",
   "bugs": {
     "email": "support@convex.dev",
-    "url": "https://github.com/get-convex/geospatial/issues"
+    "url": "https://github.com/convex/geospatial/issues"
   },
   "version": "0.2.1",
   "license": "Apache-2.0",
