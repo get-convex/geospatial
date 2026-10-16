@@ -21,7 +21,7 @@ This component is currently in beta. It's missing some functionality, but what's
 there should work. We've tested the example app up to about 1,000,000 points, so
 reach out if you're using a much larger dataset. If you find a bug or have a
 feature request, you can
-[file it here](https://github.com/get-convex/geospatial/issues).
+[file it here](https://github.com/convex/geospatial/issues).
 
 ## Pre-requisite: Convex
 
